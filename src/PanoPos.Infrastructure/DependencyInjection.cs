@@ -11,7 +11,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("PanoPos");
+        var connectionString = configuration.GetConnectionString("PanoPos")
+            ?? throw new InvalidOperationException("Connection string 'PanoPos' was not found.");
 
         services.AddDbContext<PanoPosDbContext>(options =>
         {

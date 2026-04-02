@@ -17,4 +17,20 @@ public sealed class SystemController : ControllerBase
             utcTime = DateTime.UtcNow
         });
     }
+
+    [HttpGet("info")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetInfo()
+    {
+        var environment = HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+
+        return Ok(new
+        {
+            service = "PanoPos.WebApi",
+            version = "v1",
+            environment = environment.EnvironmentName,
+            databaseProvider = "SqlServer",
+            connectionStringName = "PanoPos"
+        });
+    }
 }

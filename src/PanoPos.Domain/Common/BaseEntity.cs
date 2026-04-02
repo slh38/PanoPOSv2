@@ -2,7 +2,7 @@ namespace PanoPos.Domain.Common;
 
 public abstract class BaseEntity : IEntity, IAuditableEntity, ISoftDeletableEntity
 {
-    public long Id { get; protected set; }
+    public long Id { get; set; }
     public Guid TenantId { get; set; }
     public long SubeId { get; set; }
     public DateTime OlusturmaTarihi { get; set; }
