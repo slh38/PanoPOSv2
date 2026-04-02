@@ -3,9 +3,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PanoPos.Application.Auth;
 using PanoPos.Application.Cash;
+using PanoPos.Application.Product;
 using PanoPos.Infrastructure.Auth;
 using PanoPos.Infrastructure.Cash;
 using PanoPos.Infrastructure.Persistence;
+using PanoPos.Infrastructure.Product;
 
 namespace PanoPos.Infrastructure;
 
@@ -28,6 +30,10 @@ public static class DependencyInjection
         services.AddScoped<IAuthIslemLogServisi, BosAuthIslemLogServisi>();
         services.AddScoped<IKasaServisi, KasaServisi>();
         services.AddScoped<IVardiyaServisi, VardiyaServisi>();
+        services.AddScoped<IUrunServisi, UrunServisi>();
+        services.AddScoped<IBarkodServisi, BarkodServisi>();
+        services.AddScoped<IRenkServisi, RenkServisi>();
+        services.AddScoped<IBedenServisi, BedenServisi>();
 
         return services;
     }

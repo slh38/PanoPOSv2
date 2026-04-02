@@ -25,6 +25,11 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<KullaniciRol> KullaniciRolleri => Set<KullaniciRol>();
     public DbSet<KullaniciSube> KullaniciSubeleri => Set<KullaniciSube>();
     public DbSet<KullaniciOturum> KullaniciOturumlari => Set<KullaniciOturum>();
+    public DbSet<Urun> Urunler => Set<Urun>();
+    public DbSet<Renk> Renkler => Set<Renk>();
+    public DbSet<Beden> Bedenler => Set<Beden>();
+    public DbSet<UrunVaryant> UrunVaryantlari => Set<UrunVaryant>();
+    public DbSet<Barkod> Barkodlar => Set<Barkod>();
 
     public override int SaveChanges()
     {
