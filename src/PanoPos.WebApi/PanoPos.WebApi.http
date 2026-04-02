@@ -1,0 +1,6 @@
+@PanoPos.WebApi_HostAddress = http://localhost:5296
+
+GET {{PanoPos.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
