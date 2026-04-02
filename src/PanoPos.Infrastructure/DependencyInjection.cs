@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure;
 
@@ -9,6 +11,13 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("PanoPos");
+
+        services.AddDbContext<PanoPosDbContext>(options =>
+        {
+            options.UseSqlServer(connectionString);
+        });
+
         return services;
     }
 }
