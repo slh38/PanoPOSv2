@@ -5,11 +5,13 @@ using PanoPos.Application.Auth;
 using PanoPos.Application.Cash;
 using PanoPos.Application.Customer;
 using PanoPos.Application.Product;
+using PanoPos.Application.Restaurant;
 using PanoPos.Infrastructure.Auth;
 using PanoPos.Infrastructure.Cash;
 using PanoPos.Infrastructure.Customer;
 using PanoPos.Infrastructure.Persistence;
 using PanoPos.Infrastructure.Product;
+using PanoPos.Infrastructure.Restaurant;
 
 namespace PanoPos.Infrastructure;
 
@@ -33,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IKasaServisi, KasaServisi>();
         services.AddScoped<IVardiyaServisi, VardiyaServisi>();
         services.AddScoped<ICariServisi, CariServisi>();
+        services.AddScoped<IMasaServisi, MasaServisi>();
+        services.AddScoped<IAdisyonServisi, AdisyonServisi>();
         services.AddScoped<IUrunServisi, UrunServisi>();
         services.AddScoped<IBarkodServisi, BarkodServisi>();
         services.AddScoped<IRenkServisi, RenkServisi>();
@@ -41,4 +45,3 @@ public static class DependencyInjection
         return services;
     }
 }
-

@@ -1,4 +1,4 @@
-using PanoPos.Domain.Entities;
+﻿using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Seed;
 
@@ -6,6 +6,9 @@ public static class SystemSeedData
 {
     public static readonly Guid TenantGuid = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly DateTime SeedDate = new(2026, 4, 2, 0, 0, 0, DateTimeKind.Utc);
+    public const long MasaDurumBosId = 1;
+    public const long MasaDurumDoluId = 2;
+    public const long MasaDurumRezerveId = 3;
     private const string AdminPinHash = "100000.AQIDBAUGBwgJCgsMDQ4PEA==.zXEe8seaNwtLmNvAYvfpAmiMOk6AXt6Jn4slCkkKXHE=";
 
     public static Tenant Tenant => new()
@@ -19,6 +22,27 @@ public static class SystemSeedData
         GuncellemeTarihi = SeedDate,
         AktifMi = true,
         SilindiMi = false
+    };
+
+    public static MasaDurum MasaDurumBos => new()
+    {
+        Id = MasaDurumBosId,
+        Ad = "Bos",
+        AktifMi = true
+    };
+
+    public static MasaDurum MasaDurumDolu => new()
+    {
+        Id = MasaDurumDoluId,
+        Ad = "Dolu",
+        AktifMi = true
+    };
+
+    public static MasaDurum MasaDurumRezerve => new()
+    {
+        Id = MasaDurumRezerveId,
+        Ad = "Rezerve",
+        AktifMi = true
     };
 
     public static Sube Sube => new()

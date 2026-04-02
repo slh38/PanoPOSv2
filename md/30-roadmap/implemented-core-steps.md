@@ -210,3 +210,69 @@ Durum:
 - `dotnet test PanoPos.sln` gecti
 - toplam 26 test gecti
 - `AddCustomerCore` migration'i SQL'e uygulandi
+
+## Prompt 8 - Restoran Cekirdegi
+
+Amac:
+- masa ve adisyon cekirdegi ile restoran tarafinin temel operasyonunu hazirlamak
+- masa durumunu sistem tarafinda tutmak
+- ayni masada ayni anda tek acik adisyon kuralini uygulamak
+
+Eklenen tablolar:
+- `MasaDurum`
+- `Masa`
+- `Adisyon`
+
+Seed:
+- `Bos`
+- `Dolu`
+- `Rezerve`
+
+Temel kurallar:
+- ayni masada ayni anda sadece 1 acik adisyon olabilir
+- adisyon acilinca masa durumu `Dolu` olur
+- adisyon kapaninca masa durumu `Bos` olur
+- pasif veya silinmis masa icin adisyon acilamaz
+- soft delete filtreleri ana tablolarda calisir
+
+Eklenen servisler:
+- `IMasaServisi`
+- `MasaServisi`
+- `IAdisyonServisi`
+- `AdisyonServisi`
+
+Servis metotlari:
+- `MasaOlusturAsync`
+- `MasaListeleAsync`
+- `AdisyonAcAsync`
+- `AdisyonKapatAsync`
+- `AcikAdisyonGetirAsync`
+
+Eklenen endpointler:
+- `POST /api/v1/masa`
+- `GET /api/v1/masa?subeId=...`
+- `POST /api/v1/adisyon/ac`
+- `POST /api/v1/adisyon/kapat`
+- `GET /api/v1/adisyon/acik?masaId=...`
+
+Indexler:
+- `Masa (TenantId, SubeId, SilindiMi)`
+- `Adisyon (MasaId, Durum)`
+- `Adisyon (TenantId, SubeId, AcilisTarihi)`
+
+Test kapsami:
+- masa olusturma
+- adisyon acma
+- ayni masada ikinci acik adisyonu engelleme
+- adisyon kapaninca masa durumunun degismesi
+- acik adisyonun getirilebilmesi
+
+Migration:
+- `AddRestaurantCore`
+- dosya: `20260402154029_AddRestaurantCore`
+
+Durum:
+- `dotnet build PanoPos.sln` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 31 test gecti
+- `AddRestaurantCore` migration'i SQL'e uygulandi

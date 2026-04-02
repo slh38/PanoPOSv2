@@ -31,6 +31,9 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<UrunVaryant> UrunVaryantlari => Set<UrunVaryant>();
     public DbSet<Barkod> Barkodlar => Set<Barkod>();
     public DbSet<Cari> Cariler => Set<Cari>();
+    public DbSet<MasaDurum> MasaDurumlari => Set<MasaDurum>();
+    public DbSet<Masa> Masalar => Set<Masa>();
+    public DbSet<Adisyon> Adisyonlar => Set<Adisyon>();
 
     public override int SaveChanges()
     {
@@ -115,6 +118,7 @@ public sealed class PanoPosDbContext : DbContext
     private static void ApplySeedData(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Tenant>().HasData(SystemSeedData.Tenant);
+        modelBuilder.Entity<MasaDurum>().HasData(SystemSeedData.MasaDurumBos, SystemSeedData.MasaDurumDolu, SystemSeedData.MasaDurumRezerve);
         modelBuilder.Entity<Sube>().HasData(SystemSeedData.Sube);
         modelBuilder.Entity<Cihaz>().HasData(SystemSeedData.Cihaz);
         modelBuilder.Entity<Kullanici>().HasData(SystemSeedData.AdminKullanici);
@@ -123,4 +127,3 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
     }
 }
-

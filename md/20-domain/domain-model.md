@@ -1,4 +1,4 @@
-# Domain Modeli
+﻿# Domain Modeli
 
 ## Ortak Kolonlar
 
@@ -125,6 +125,12 @@ Masa durumlari:
 - Dolu
 - Rezerve
 
+Temel kurallar:
+- ayni masada ayni anda tek acik adisyon olabilir
+- adisyon acilinca masa durumu `Dolu` olur
+- adisyon kapaninca masa durumu `Bos` olur
+- pasif masa icin adisyon acilamaz
+
 Ileride masa durumu SignalR ile izlenebilir.
 
 ## Urun
@@ -166,4 +172,5 @@ Tablo:
 
 Ileride:
 - IslemLogDetay
+
 
