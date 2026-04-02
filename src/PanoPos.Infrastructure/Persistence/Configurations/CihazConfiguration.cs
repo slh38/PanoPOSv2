@@ -20,5 +20,10 @@ public sealed class CihazConfiguration : IEntityTypeConfiguration<Cihaz>
             .WithMany(x => x.Cihazlar)
             .HasForeignKey(x => x.SubeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.VarsayilanKasa)
+            .WithMany(x => x.Cihazlar)
+            .HasForeignKey(x => x.VarsayilanKasaId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

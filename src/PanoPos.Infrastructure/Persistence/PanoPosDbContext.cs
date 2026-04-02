@@ -16,6 +16,10 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<Tenant> Tenantler => Set<Tenant>();
     public DbSet<Sube> Subeler => Set<Sube>();
     public DbSet<Cihaz> Cihazlar => Set<Cihaz>();
+    public DbSet<Kasa> Kasalar => Set<Kasa>();
+    public DbSet<Vardiya> Vardiyalar => Set<Vardiya>();
+    public DbSet<VardiyaKapanis> VardiyaKapanislari => Set<VardiyaKapanis>();
+    public DbSet<KasaHareket> KasaHareketleri => Set<KasaHareket>();
     public DbSet<Kullanici> Kullanicilar => Set<Kullanici>();
     public DbSet<Rol> Roller => Set<Rol>();
     public DbSet<KullaniciRol> KullaniciRolleri => Set<KullaniciRol>();
@@ -40,9 +44,7 @@ public sealed class PanoPosDbContext : DbContext
         return base.SaveChangesAsync(cancellationToken);
     }
 
-    public override Task<int> SaveChangesAsync(
-        bool acceptAllChangesOnSuccess,
-        CancellationToken cancellationToken = default)
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         ApplyEntityRules();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);

@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PanoPos.Application.Auth;
+using PanoPos.Application.Cash;
 using PanoPos.Infrastructure.Auth;
+using PanoPos.Infrastructure.Cash;
 using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure;
@@ -24,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IPinHashServisi, PinHashServisi>();
         services.AddScoped<IAuthServisi, AuthServisi>();
         services.AddScoped<IAuthIslemLogServisi, BosAuthIslemLogServisi>();
+        services.AddScoped<IKasaServisi, KasaServisi>();
+        services.AddScoped<IVardiyaServisi, VardiyaServisi>();
 
         return services;
     }

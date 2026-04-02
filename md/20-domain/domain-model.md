@@ -166,3 +166,4 @@ Tablo:
 
 Ileride:
 - IslemLogDetay
+
