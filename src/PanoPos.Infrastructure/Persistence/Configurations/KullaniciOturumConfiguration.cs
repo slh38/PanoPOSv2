@@ -12,6 +12,7 @@ public sealed class KullaniciOturumConfiguration : IEntityTypeConfiguration<Kull
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
         builder.Property(x => x.GirisTarihi).IsRequired();
+        builder.HasIndex(x => new { x.KullaniciId, x.AktifMi });
 
         builder.HasOne(x => x.Kullanici)
             .WithMany(x => x.KullaniciOturumlar)

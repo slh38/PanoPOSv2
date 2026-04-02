@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace PanoPos.Infrastructure.Persistence;
 
@@ -7,11 +8,31 @@ public sealed class PanoPosDbContextFactory : IDesignTimeDbContextFactory<PanoPo
 {
     public PanoPosDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<PanoPosDbContext>();
+        var configuration = BuildConfiguration();
+        var connectionString = configuration.GetConnectionString("PanoPos")
+            ?? throw new InvalidOperationException("Connection string 'PanoPos' was not found.");
 
-        optionsBuilder.UseSqlServer(
-            "Server=SLHASUS\\SQLEXPRESS;Database=PanoPosDb;User Id=sa;Password=admin-*741852963;TrustServerCertificate=True;");
+        var optionsBuilder = new DbContextOptionsBuilder<PanoPosDbContext>();
+        optionsBuilder.UseSqlServer(connectionString);
 
         return new PanoPosDbContext(optionsBuilder.Options);
+    }
+
+    private static IConfiguration BuildConfiguration()
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var webApiPath = Path.Combine(currentDirectory, "src", "PanoPos.WebApi");
+
+        if (!Directory.Exists(webApiPath))
+        {
+            webApiPath = Path.GetFullPath(Path.Combine(currentDirectory, "..", "PanoPos.WebApi"));
+        }
+
+        return new ConfigurationBuilder()
+            .SetBasePath(webApiPath)
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
     }
 }

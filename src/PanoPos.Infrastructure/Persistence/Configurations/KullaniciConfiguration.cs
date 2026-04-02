@@ -13,8 +13,12 @@ public sealed class KullaniciConfiguration : IEntityTypeConfiguration<Kullanici>
 
         builder.Property(x => x.Ad).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Soyad).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.Pin).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.PinHash).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.PinSonDegistirmeTarihi);
+        builder.Property(x => x.SonGirisTarihi);
+        builder.Property(x => x.BasarisizGirisSayisi).IsRequired();
+        builder.Property(x => x.KilitliMi).IsRequired();
 
-        builder.HasIndex(x => new { x.TenantId, x.Pin }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.AktifMi });
     }
 }

@@ -6,6 +6,7 @@ public static class SystemSeedData
 {
     public static readonly Guid TenantGuid = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly DateTime SeedDate = new(2026, 4, 2, 0, 0, 0, DateTimeKind.Utc);
+    private const string AdminPinHash = "100000.AQIDBAUGBwgJCgsMDQ4PEA==.zXEe8seaNwtLmNvAYvfpAmiMOk6AXt6Jn4slCkkKXHE=";
 
     public static Tenant Tenant => new()
     {
@@ -53,7 +54,11 @@ public static class SystemSeedData
         SubeId = 1,
         Ad = "Admin",
         Soyad = "Kullanici",
-        Pin = "1234",
+        PinHash = AdminPinHash,
+        PinSonDegistirmeTarihi = SeedDate,
+        SonGirisTarihi = null,
+        BasarisizGirisSayisi = 0,
+        KilitliMi = false,
         OlusturmaTarihi = SeedDate,
         GuncellemeTarihi = SeedDate,
         AktifMi = true,
