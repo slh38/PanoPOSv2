@@ -1,0 +1,212 @@
+﻿# Uygulanan Cekirdek Adimlar
+
+Bu dosya, prompt bazli tamamlanan cekirdek adimlari ve teknik sonucunu kayit altinda tutar.
+
+## Prompt 4 - PIN Login Cekirdegi
+
+Kapsam:
+- PIN ile hizli kullanici girisi
+- JWT olmadan oturum acma
+- hash'li PIN saklama
+- ayni kullanici icin tek aktif oturum
+
+Yapilanlar:
+- `Kullanici` tablosu `PinHash`, `PinSonDegistirmeTarihi`, `SonGirisTarihi`, `BasarisizGirisSayisi`, `KilitliMi` alanlari ile genislendi
+- `IPinHashServisi` ve `PinHashServisi` eklendi
+- `IAuthServisi` ve `AuthServisi` ile login/logout akisi kuruldu
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- ProblemDetails ile yanlis PIN, pasif cihaz, pasif kullanici, kilitli kullanici gibi durumlar ayrildi
+- `AddPinLoginCore` migration'i olusturuldu ve uygulandi
+
+Durum:
+- build gecti
+- testler gecti
+- login/logout endpointleri ayakta
+
+## Prompt 5 - Kasa ve Vardiya Cekirdegi
+
+Kapsam:
+- kasa tanimi
+- vardiya acma/kapatma
+- nakit hareketlerinin `KasaHareket` uzerinden izlenmesi
+
+Eklenen tablolar:
+- `Kasa`
+- `Vardiya`
+- `VardiyaKapanis`
+- `KasaHareket`
+
+Temel kurallar:
+- ayni cihazda ayni anda tek aktif vardiya
+- ayni kasada ayni anda tek aktif vardiya
+- vardiya acilisinda acilis nakdi `KasaHareket` olarak yazilir
+- vardiya kapanisinda beklenen nakit hesaplanir ve fark kaydi olusur
+
+Eklenen endpointler:
+- `POST /api/v1/vardiya/ac`
+- `POST /api/v1/vardiya/kapat`
+- `GET /api/v1/vardiya/aktif?cihazId=...`
+- `GET /api/v1/kasa`
+- `POST /api/v1/kasa`
+
+Not:
+- vardiya zorunlulugu sabit kural olarak yazilmadi
+- isletme ayari `VardiyaliSatisZorunlu = true` ise aktif vardiya zorunlu olacak
+- ayar kapaliysa vardiyasiz satis mumkun olacak
+
+Migration:
+- `AddCashAndShiftCore`
+
+Durum:
+- build gecti
+- testler gecti
+- migration uygulandi
+
+## Prompt 6 - Urun, Varyant ve Barkod Cekirdegi
+
+Amac:
+- hizli satis ve restoran icin temel urun altyapisini kurmak
+- varyantli urunleri desteklemek
+- urun veya varyanta bagli barkod tanimi yapmak
+- listeleme ve barkod aramada performansli sorgu kullanmak
+
+Eklenen tablolar:
+- `Urun`
+- `Renk`
+- `Beden`
+- `UrunVaryant`
+- `Barkod`
+
+Temel kurallar:
+- `Barkod` ya `UrunId` ya da `UrunVaryantId` uzerine baglanir
+- ikisi ayni anda dolu veya ayni anda bos olamaz
+- ayni tenant icinde ayni barkod tekrar edemez
+- ayni urun altinda ayni `RenkId + BedenId` kombinasyonu tekrar edemez
+- varyantta renk ve beden ikisi birden bos olamaz
+- urun listesinde pagination zorunludur
+
+Teknik kararlar:
+- yazma islemleri EF Core ile kaldi
+- `GET /api/v1/urun` listeleme Dapper ile yazildi
+- `GET /api/v1/barkod/{barkodNo}` lookup sorgusu Dapper ile yazildi
+- `SELECT *` kullanilmadi
+- SQL Server ve SQLite icin ayri pagination SQL'i yazildi
+
+Eklenen endpointler:
+- `POST /api/v1/urun`
+- `PUT /api/v1/urun/{id}`
+- `GET /api/v1/urun/{id}`
+- `GET /api/v1/urun?search=&page=&pageSize=`
+- `POST /api/v1/urun/{urunId}/varyant`
+- `GET /api/v1/urun/{urunId}/varyant`
+- `POST /api/v1/barkod`
+- `GET /api/v1/barkod/{barkodNo}`
+- `POST /api/v1/renk`
+- `GET /api/v1/renk`
+- `POST /api/v1/beden`
+- `GET /api/v1/beden`
+
+Migration:
+- `AddProductVariantBarcodeCore`
+
+Durum:
+- build gecti
+- toplam 22 test gecti
+- migration olusturuldu ve uygulandi
+
+## Prompt 7 - Cari Cekirdegi
+
+Amac:
+- temel cari kartini sisteme eklemek
+- satis, tahsilat ve cari hareketleri icin baslangic referans yapisini hazirlamak
+- tenant ve sube bazli sade CRUD ve performansli listeleme kurmak
+
+Eklenen tablo:
+- `Cari`
+
+Alanlar:
+- `Id`
+- `TenantId`
+- `SubeId`
+- `CariKodu`
+- `Ad`
+- `Tip`
+- `Telefon`
+- `Email`
+- `VergiNo`
+- ortak audit alanlari
+- `AktifMi`
+- `SilindiMi`
+
+Tip alani:
+- `CariTipi` enum'u eklendi
+- `Satici`
+- `Alici`
+- `Personel`
+- `Masraf`
+
+Temel kurallar:
+- `(TenantId, CariKodu)` unique tanimlandi
+- listeleme ve detay sorgularinda soft delete filtresi calisiyor
+- tum islemler tenant ve sube bazli yurutuluyor
+- controller icinde is kurali tutulmadi
+- listeleme Dapper ile yazildi
+- liste sorgusunda sadece gerekli kolonlar secildi:
+  - `Id`
+  - `CariKodu`
+  - `Ad`
+  - `Tip`
+  - `Telefon`
+  - `AktifMi`
+
+Eklenen servis:
+- `ICariServisi`
+- `CariServisi`
+
+Servis metotlari:
+- `CariOlusturAsync`
+- `CariGuncelleAsync`
+- `CariGetirAsync`
+- `CariListeleAsync`
+
+Endpointler:
+- `POST /api/v1/cari`
+- `PUT /api/v1/cari/{id}`
+- `GET /api/v1/cari/{id}?subeId=...`
+- `GET /api/v1/cari?subeId=...&search=&page=&pageSize=`
+
+Listeleme davranisi:
+- `search` alani `Ad` veya `CariKodu` uzerinden calisir
+- pagination zorunludur
+- donus modeli:
+  - `toplamKayit`
+  - `sayfa`
+  - `sayfaBoyutu`
+  - `kayitlar`
+
+Indexler:
+- `(TenantId, SubeId, SilindiMi)`
+- `(TenantId, CariKodu)`
+
+Test kapsami:
+- cari ekleme
+- duplicate cari kodu kontrolu
+- soft delete filtre kontrolu
+- sayfali listeleme
+
+Migration:
+- `AddCustomerCore`
+- dosya: `20260402144841_AddCustomerCore`
+
+Uygulama notu:
+- `dotnet ef migrations add` ilk denemede tasarim zamani build asamasinda sessiz hata verdi
+- ayni kod tabani `dotnet build PanoPos.sln` ile sorunsuz derlendi
+- migration, mevcut derlenmis cikti uzerinden `--no-build` ile olusturuldu
+- sonraki benzer durumda once `dotnet build`, sonra gerekirse `dotnet ef ... --no-build` yolu izlenebilir
+
+Durum:
+- `dotnet build PanoPos.sln` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 26 test gecti
+- `AddCustomerCore` migration'i SQL'e uygulandi

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PanoPos.Domain.Common;
 using PanoPos.Domain.Entities;
@@ -30,6 +30,7 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<Beden> Bedenler => Set<Beden>();
     public DbSet<UrunVaryant> UrunVaryantlari => Set<UrunVaryant>();
     public DbSet<Barkod> Barkodlar => Set<Barkod>();
+    public DbSet<Cari> Cariler => Set<Cari>();
 
     public override int SaveChanges()
     {
@@ -122,3 +123,4 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
     }
 }
+
