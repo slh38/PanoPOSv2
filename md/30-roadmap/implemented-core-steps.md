@@ -579,3 +579,102 @@ Durum:
 - `dotnet test PanoPos.sln --no-build` gecti
 - toplam 58 test gecti
 - `ReviseInvoiceDiscountAndCurrency` migration'i SQL'e uygulandi
+
+## Prompt 13 - Tahsilat Cekirdegi
+
+Amac:
+- fatura tahsilatini cekirdege eklemek
+- odeme tipine gore kasa, banka ve cari hareketlerini uretmek
+- tahsilat islemini transaction icinde guvenli hale getirmek
+- listeleme ve temel banka tanimini sisteme eklemek
+
+Eklenen tablolar:
+- `Tahsilat`
+- `Banka`
+- `BankaHareket`
+- `CariHareket`
+
+Temel kurallar:
+- tahsilat sadece `Acik` durumdaki faturaya uygulanir
+- ilk surumde sadece tam tahsilat kabul edilir
+- `Tutar`, `ParaBirimKodu` ve `Kur` faturayla birebir uyumlu olmalidir
+- `YerelTutar = Tutar x Kur` olarak hesaplanir
+- tahsilat transaction icinde calisir
+- nakit tahsilatta `KasaHareket` zorunlu olusur
+- kredi karti tahsilatta `BankaHareket` zorunlu olusur
+- veresiye tahsilatta faturada `CariId` zorunludur ve `CariHareket` borc kaydi olusur
+- tahsilat basarili olunca fatura `Kapali` durumuna cekilir
+- controller icinde is kurali tutulmaz
+
+Eklenen enumlar:
+- `OdemeTipi`
+  - `Nakit`
+  - `KrediKarti`
+  - `Veresiye`
+- `CariHareketTipi`
+  - `Borc`
+  - `Alacak`
+
+Eklenen servisler:
+- `ITahsilatServisi`
+- `TahsilatServisi`
+- `IBankaServisi`
+- `BankaServisi`
+
+Servis metotlari:
+- `TahsilatOlusturAsync`
+- `TahsilatGetirAsync`
+- `TahsilatListeleAsync`
+- `BankaOlusturAsync`
+- `BankaListeleAsync`
+
+Eklenen endpointler:
+- `POST /api/v1/tahsilat`
+- `GET /api/v1/tahsilat?subeId=...&page=&pageSize=`
+- `GET /api/v1/tahsilat/{id}`
+- `POST /api/v1/banka`
+- `GET /api/v1/banka?subeId=...`
+
+Listeleme davranisi:
+- tahsilat listeleme Dapper ile yazildi
+- pagination zorunlu
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `TahsilatFisNo`
+  - `FaturaId`
+  - `OdemeTipi`
+  - `ParaBirimKodu`
+  - `Kur`
+  - `Tutar`
+  - `YerelTutar`
+  - `TahsilatTarihi`
+
+Indexler:
+- `Tahsilat (TenantId, SubeId, TahsilatTarihi)`
+- `Tahsilat (FaturaId)`
+- `Tahsilat (TenantId, TahsilatFisNo)`
+- `BankaHareket (TenantId, SubeId, BankaId, HareketTarihi)`
+- `BankaHareket (TahsilatId)`
+- `CariHareket (TenantId, SubeId, CariId, HareketTarihi)`
+- `CariHareket (TahsilatId)`
+
+Test kapsami:
+- nakit tahsilat basarili
+- kredi karti tahsilat basarili
+- veresiye tahsilat basarili
+- ilgili hareket tablolarinin olusmasi
+- yerel tutar hesaplamasi
+- transaction rollback davranisi
+- sayfali tahsilat listeleme
+- banka olusturma ve listeleme
+
+Migration:
+- `AddPaymentCore`
+- dosya: `20260406174653_AddPaymentCore`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln --no-build` gecti
+- toplam 65 test gecti
+- `AddPaymentCore` migration'i SQL'e uygulandi
+

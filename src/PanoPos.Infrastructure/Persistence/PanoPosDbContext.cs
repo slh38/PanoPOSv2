@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PanoPos.Domain.Common;
 using PanoPos.Domain.Entities;
@@ -31,6 +31,10 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<UrunVaryant> UrunVaryantlari => Set<UrunVaryant>();
     public DbSet<Barkod> Barkodlar => Set<Barkod>();
     public DbSet<Cari> Cariler => Set<Cari>();
+    public DbSet<CariHareket> CariHareketleri => Set<CariHareket>();
+    public DbSet<Banka> Bankalar => Set<Banka>();
+    public DbSet<BankaHareket> BankaHareketleri => Set<BankaHareket>();
+    public DbSet<Tahsilat> Tahsilatlar => Set<Tahsilat>();
     public DbSet<MasaDurum> MasaDurumlari => Set<MasaDurum>();
     public DbSet<Masa> Masalar => Set<Masa>();
     public DbSet<Adisyon> Adisyonlar => Set<Adisyon>();
@@ -131,5 +135,6 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
     }
 }
+
 
 

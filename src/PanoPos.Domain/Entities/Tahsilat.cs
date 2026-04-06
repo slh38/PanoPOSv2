@@ -1,0 +1,19 @@
+using PanoPos.Domain.Common;
+using PanoPos.Domain.Enums;
+
+namespace PanoPos.Domain.Entities;
+
+public sealed class Tahsilat : BaseEntity
+{
+    public long FaturaId { get; set; }
+    public string TahsilatFisNo { get; set; } = string.Empty;
+    public OdemeTipi OdemeTipi { get; set; }
+    public string ParaBirimKodu { get; set; } = string.Empty;
+    public decimal Kur { get; set; }
+    public decimal Tutar { get; set; }
+    public decimal YerelTutar { get; set; }
+    public string? Aciklama { get; set; }
+    public DateTime TahsilatTarihi { get; set; }
+
+    public Fatura Fatura { get; set; } = null!;
+}
