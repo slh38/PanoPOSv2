@@ -133,7 +133,9 @@ Siparis alanlari icin notlar:
 Fatura kurallari:
 - fatura siparisten transaction icinde uretilir
 - siparis detaylari faturaya snapshot olarak kopyalanir
-- siparis durumu `Tamamlandi` olur
+- siparisin para birimi, kur, ara toplam, genel indirim ve net toplam alanlari faturaya aynen tasinir
+- faturada satir indirimi ve genel indirim gorunur halde korunur
+- mevcut uyumluluk icin `ToplamTutar`, `NetToplam` ile ayni tutulur
 - fatura fiziksel olarak silinmez, durum ile yonetilir
 - Kasa
 - KasaHareket

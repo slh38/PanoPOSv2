@@ -513,3 +513,69 @@ Durum:
 - `dotnet test PanoPos.sln` gecti
 - toplam 52 test gecti
 - `ReviseOrderDiscountAndCurrency` migration'i SQL'e uygulandi
+
+## Prompt 12 - Fatura Indirim ve Para Birimi Revizyonu
+
+Amac:
+- mevcut fatura cekirdigine satir bazli indirim eklemek
+- fatura geneli indirim yapisini eklemek
+- para birimi ve kur destegiyle faturayi siparis snapshot'ina tam uyumlu hale getirmek
+- mevcut endpointleri bozmadan fatura gorunumunu genisletmek
+
+Revize edilen alanlar:
+- `Fatura`
+  - `ParaBirimKodu`
+  - `Kur`
+  - `AraToplam`
+  - `GenelIndirimOrani`
+  - `GenelIndirimTutari`
+  - `NetToplam`
+- `FaturaDetay`
+  - `SatirAraToplam`
+  - `IndirimOrani`
+  - `IndirimTutari`
+  - `SatirNetToplam`
+
+Temel kurallar:
+- fatura siparisten olusurken para birimi ve kur bilgisi siparisten aynen kopyalanir
+- siparisteki ara toplam, genel indirim ve net toplam alanlari faturaya snapshot olarak tasinir
+- siparis detayindaki satir ara toplam, satir indirimi ve satir net toplam faturaya aynen kopyalanir
+- `ParaBirimKodu` bos olamaz
+- `Kur` 0'dan buyuk olmalidir
+- `NetToplam` negatif olamaz
+- fatura olustuktan sonra kapatma ve iptal kurallari aynen korunur
+
+Geriye uyumluluk notu:
+- mevcut kullanimlari bozmamak icin `Fatura.ToplamTutar = NetToplam` akisi korunur
+- mevcut kullanimlari bozmamak icin `FaturaDetay.SatirToplam = SatirNetToplam` akisi korunur
+
+Listeleme davranisi:
+- mevcut Dapper listeleme sorgusu revize edildi
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `FaturaNo`
+  - `Durum`
+  - `ParaBirimKodu`
+  - `Kur`
+  - `AraToplam`
+  - `GenelIndirimTutari`
+  - `NetToplam`
+  - `KapanisTarihi`
+
+Test kapsami:
+- siparisteki para biriminin faturaya kopyalanmasi
+- siparisteki kur bilgisinin faturaya kopyalanmasi
+- satir indirimlerinin faturaya snapshot gelmesi
+- genel indirimin faturaya snapshot gelmesi
+- net toplamin dogru kopyalanmasi
+- fatura listelemede yeni alanlarin donmesi
+
+Migration:
+- `ReviseInvoiceDiscountAndCurrency`
+- dosya: `20260406155131_ReviseInvoiceDiscountAndCurrency`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln --no-build` gecti
+- toplam 58 test gecti
+- `ReviseInvoiceDiscountAndCurrency` migration'i SQL'e uygulandi

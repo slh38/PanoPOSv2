@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Invoice;
@@ -39,6 +39,8 @@ public sealed class FaturaServisi : IFaturaServisi
             throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Detaysiz siparisten fatura olusturulamaz.", "siparis_has_no_lines");
         }
 
+        FaturaKaynakSiparisKontrolu(siparis);
+
         var mevcutFaturaVar = await _dbContext.Faturalar.AnyAsync(x => x.SiparisId == siparis.Id && x.Durum != FaturaDurumu.Iptal, cancellationToken);
         if (mevcutFaturaVar)
         {
@@ -55,6 +57,12 @@ public sealed class FaturaServisi : IFaturaServisi
             SiparisId = siparis.Id,
             CariId = siparis.CariId,
             Aciklama = NormalizeOptional(request.Aciklama) ?? siparis.Aciklama,
+            ParaBirimKodu = siparis.ParaBirimKodu,
+            Kur = siparis.Kur,
+            AraToplam = siparis.AraToplam,
+            GenelIndirimOrani = siparis.GenelIndirimOrani,
+            GenelIndirimTutari = siparis.GenelIndirimTutari,
+            NetToplam = siparis.NetToplam,
             ToplamTutar = siparis.ToplamTutar,
             Durum = FaturaDurumu.Acik,
             AktifMi = true,
@@ -75,6 +83,10 @@ public sealed class FaturaServisi : IFaturaServisi
                 UrunVaryantId = detay.UrunVaryantId,
                 Miktar = detay.Miktar,
                 BirimFiyat = detay.BirimFiyat,
+                SatirAraToplam = detay.SatirAraToplam,
+                IndirimOrani = detay.IndirimOrani,
+                IndirimTutari = detay.IndirimTutari,
+                SatirNetToplam = detay.SatirNetToplam,
                 SatirToplam = detay.SatirToplam,
                 Aciklama = detay.Aciklama,
                 AktifMi = true,
@@ -106,6 +118,12 @@ public sealed class FaturaServisi : IFaturaServisi
             SiparisId = fatura.SiparisId,
             CariId = fatura.CariId,
             Aciklama = fatura.Aciklama,
+            ParaBirimKodu = fatura.ParaBirimKodu,
+            Kur = fatura.Kur,
+            AraToplam = fatura.AraToplam,
+            GenelIndirimOrani = fatura.GenelIndirimOrani,
+            GenelIndirimTutari = fatura.GenelIndirimTutari,
+            NetToplam = fatura.NetToplam,
             ToplamTutar = fatura.ToplamTutar,
             Durum = fatura.Durum,
             KapanisTarihi = fatura.KapanisTarihi,
@@ -120,6 +138,10 @@ public sealed class FaturaServisi : IFaturaServisi
                 VaryantKodu = x.UrunVaryant != null ? x.UrunVaryant.VaryantKodu : null,
                 Miktar = x.Miktar,
                 BirimFiyat = x.BirimFiyat,
+                SatirAraToplam = x.SatirAraToplam,
+                IndirimOrani = x.IndirimOrani,
+                IndirimTutari = x.IndirimTutari,
+                SatirNetToplam = x.SatirNetToplam,
                 SatirToplam = x.SatirToplam,
                 Aciklama = x.Aciklama
             }).ToList()
@@ -159,7 +181,7 @@ WHERE TenantId = @TenantId
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
-            ? @"SELECT Id, FaturaNo, SiparisId, ToplamTutar, Durum, KapanisTarihi
+            ? @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -167,7 +189,7 @@ WHERE TenantId = @TenantId
   AND (@Durum IS NULL OR Durum = @Durum)
 ORDER BY Id DESC
 LIMIT @Take OFFSET @Skip;"
-            : @"SELECT Id, FaturaNo, SiparisId, ToplamTutar, Durum, KapanisTarihi
+            : @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -254,6 +276,24 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             .Max() + 1;
 
         return $"FTR-{bugun}-{sonraki:000000}";
+    }
+
+    private static void FaturaKaynakSiparisKontrolu(Siparis siparis)
+    {
+        if (string.IsNullOrWhiteSpace(siparis.ParaBirimKodu))
+        {
+            throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Siparis para birimi bos olamaz.", "invoice_currency_required");
+        }
+
+        if (siparis.Kur <= 0)
+        {
+            throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Siparis kuru 0'dan buyuk olmalidir.", "invoice_currency_rate_invalid");
+        }
+
+        if (siparis.NetToplam < 0)
+        {
+            throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Siparis net toplam negatif olamaz.", "invoice_net_total_negative");
+        }
     }
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

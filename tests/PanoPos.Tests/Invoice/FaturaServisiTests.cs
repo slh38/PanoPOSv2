@@ -1,5 +1,6 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using PanoPos.Application.Common;
 using PanoPos.Application.Invoice;
 using PanoPos.Application.Order;
 using PanoPos.Domain.Entities;
@@ -62,6 +63,63 @@ public sealed class FaturaServisiTests : IDisposable
     }
 
     [Fact]
+    public async Task Siparisteki_para_birimi_faturaya_kopyalanir()
+    {
+        var siparis = await HazirSiparisAsync(paraBirimKodu: "USD", kur: 38.25m);
+
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        Assert.Equal("USD", fatura.ParaBirimKodu);
+    }
+
+    [Fact]
+    public async Task Siparisteki_kur_faturaya_kopyalanir()
+    {
+        var siparis = await HazirSiparisAsync(paraBirimKodu: "EUR", kur: 41.75m);
+
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        Assert.Equal(41.75m, fatura.Kur);
+    }
+
+    [Fact]
+    public async Task Satir_indirimleri_faturaya_snapshot_gelir()
+    {
+        var siparis = await HazirSiparisAsync(satirIndirimOrani: 10m);
+
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        var detay = Assert.Single(fatura.Detaylar);
+        Assert.Equal(120m, detay.SatirAraToplam);
+        Assert.Equal(10m, detay.IndirimOrani);
+        Assert.Equal(12m, detay.IndirimTutari);
+        Assert.Equal(108m, detay.SatirNetToplam);
+    }
+
+    [Fact]
+    public async Task Genel_indirim_faturaya_snapshot_gelir()
+    {
+        var siparis = await HazirSiparisAsync(genelIndirimOrani: 5m);
+
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        Assert.Equal(120m, fatura.AraToplam);
+        Assert.Equal(5m, fatura.GenelIndirimOrani);
+        Assert.Equal(6m, fatura.GenelIndirimTutari);
+    }
+
+    [Fact]
+    public async Task NetToplam_dogru_kopyalanir()
+    {
+        var siparis = await HazirSiparisAsync(satirIndirimOrani: 10m, genelIndirimOrani: 5m);
+
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        Assert.Equal(102.60m, fatura.NetToplam);
+        Assert.Equal(fatura.NetToplam, fatura.ToplamTutar);
+    }
+
+    [Fact]
     public async Task Siparis_durumu_guncellenir()
     {
         var siparis = await HazirSiparisAsync();
@@ -98,6 +156,23 @@ public sealed class FaturaServisiTests : IDisposable
     }
 
     [Fact]
+    public async Task Fatura_listelemede_yeni_alanlar_doner()
+    {
+        var siparis = await HazirSiparisAsync(paraBirimKodu: "USD", kur: 38.25m, satirIndirimOrani: 10m, genelIndirimOrani: 5m);
+        var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
+
+        var liste = await _faturaServisi.FaturaListeleAsync(1, (int)FaturaDurumu.Acik, 1, 10);
+
+        var kayit = Assert.Single(liste.Kayitlar);
+        Assert.Equal(fatura.Id, kayit.Id);
+        Assert.Equal("USD", kayit.ParaBirimKodu);
+        Assert.Equal(38.25m, kayit.Kur);
+        Assert.Equal(120m, kayit.AraToplam);
+        Assert.Equal(5.40m, kayit.GenelIndirimTutari);
+        Assert.Equal(102.60m, kayit.NetToplam);
+    }
+
+    [Fact]
     public async Task Sayfali_liste_calisir()
     {
         for (var i = 0; i < 3; i++)
@@ -112,7 +187,14 @@ public sealed class FaturaServisiTests : IDisposable
         Assert.Equal(2, liste.Kayitlar.Count);
     }
 
-    private async Task<Siparis> HazirSiparisAsync(string urunAd = "Latte")
+    private async Task<Siparis> HazirSiparisAsync(
+        string urunAd = "Latte",
+        string paraBirimKodu = "TRY",
+        decimal kur = 1m,
+        decimal? satirIndirimOrani = null,
+        decimal? satirIndirimTutari = null,
+        decimal? genelIndirimOrani = null,
+        decimal? genelIndirimTutari = null)
     {
         var urun = new Urun
         {
@@ -131,15 +213,19 @@ public sealed class FaturaServisiTests : IDisposable
         {
             SubeId = 1,
             SiparisTipi = SiparisTipi.HizliSatisBekleyen,
-            ParaBirimKodu = "TRY",
-            Kur = 1
+            ParaBirimKodu = paraBirimKodu,
+            Kur = kur,
+            GenelIndirimOrani = genelIndirimOrani,
+            GenelIndirimTutari = genelIndirimTutari
         });
 
         await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
             UrunId = urun.Id,
             Miktar = 2,
-            BirimFiyat = 60m
+            BirimFiyat = 60m,
+            IndirimOrani = satirIndirimOrani,
+            IndirimTutari = satirIndirimTutari
         });
 
         return await _dbContext.Siparisler.SingleAsync(x => x.Id == siparis.Id);
@@ -151,4 +237,3 @@ public sealed class FaturaServisiTests : IDisposable
         _connection.Dispose();
     }
 }
-

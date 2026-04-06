@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PanoPos.Domain.Entities;
 
@@ -13,6 +13,12 @@ public sealed class FaturaConfiguration : IEntityTypeConfiguration<Fatura>
 
         builder.Property(x => x.FaturaNo).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Aciklama).HasMaxLength(500);
+        builder.Property(x => x.ParaBirimKodu).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Kur).HasColumnType("decimal(18,6)").IsRequired();
+        builder.Property(x => x.AraToplam).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.GenelIndirimOrani).HasColumnType("decimal(5,2)");
+        builder.Property(x => x.GenelIndirimTutari).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.NetToplam).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.ToplamTutar).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.Durum).HasColumnType("smallint").IsRequired();
 

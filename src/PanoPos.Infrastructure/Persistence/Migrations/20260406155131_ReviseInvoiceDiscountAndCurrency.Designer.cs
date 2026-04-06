@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PanoPos.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using PanoPos.Infrastructure.Persistence;
 namespace PanoPos.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PanoPosDbContext))]
-    partial class PanoPosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260406155131_ReviseInvoiceDiscountAndCurrency")]
+    partial class ReviseInvoiceDiscountAndCurrency
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
