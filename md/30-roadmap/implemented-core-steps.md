@@ -276,3 +276,90 @@ Durum:
 - `dotnet test PanoPos.sln` gecti
 - toplam 31 test gecti
 - `AddRestaurantCore` migration'i SQL'e uygulandi
+
+## Prompt 9 - Siparis Cekirdegi
+
+Amac:
+- bekleyen hizli satis ve restoran siparislerini tek veri modelinde toplamak
+- siparis satirlarini ayri tabloda tutmak
+- siparis toplam tutarini satirlardan uretmek
+- listeleme ve filtrelemeyi Dapper ile sade ve hizli tutmak
+
+Eklenen tablolar:
+- `Siparis`
+- `SiparisDetay`
+
+Temel kurallar:
+- siparis tipi `Masa` veya `HizliSatisBekleyen` olabilir
+- masa siparisinde `AdisyonId` zorunludur
+- hizli satis bekleyende `AdisyonId` bos olabilir
+- satir eklendiginde `Siparis.ToplamTutar` guncellenir
+- siparis fiziksel olarak silinmez, `Durum` ile yonetilir
+- soft delete filtreleri aktif kalir
+
+Enumlar:
+- `SiparisTipi`
+  - `Masa`
+  - `HizliSatisBekleyen`
+- `SiparisDurumu`
+  - `Bekliyor`
+  - `Tamamlandi`
+  - `Iptal`
+
+Eklenen servis:
+- `ISiparisServisi`
+- `SiparisServisi`
+
+Servis metotlari:
+- `SiparisOlusturAsync`
+- `SiparisSatirEkleAsync`
+- `SiparisGetirAsync`
+- `SiparisListeleAsync`
+- `SiparisIptalAsync`
+
+Eklenen endpointler:
+- `POST /api/v1/siparis`
+- `POST /api/v1/siparis/{id}/satir`
+- `GET /api/v1/siparis/{id}`
+- `GET /api/v1/siparis?subeId=...&durum=...&page=&pageSize=`
+- `POST /api/v1/siparis/{id}/iptal`
+
+Listeleme davranisi:
+- Dapper kullanildi
+- pagination zorunlu
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `SiparisNo`
+  - `SiparisTipi`
+  - `AdisyonId`
+  - `ToplamTutar`
+  - `Durum`
+
+Indexler:
+- `Siparis (TenantId, SubeId, Durum)`
+- `Siparis (TenantId, SiparisNo)`
+- `Siparis (AdisyonId, Durum)`
+- `SiparisDetay (SiparisId)`
+
+Test kapsami:
+- siparis olusturma
+- masa siparisinde adisyon zorunlulugu
+- hizli satis siparisinde adisyonun opsiyonel olmasi
+- satir eklenince toplam guncellenmesi
+- siparis iptali
+- sayfali listeleme
+- adisyona bagli siparis olusturma
+
+Migration:
+- `AddOrderCore`
+- dosya: `20260406150419_AddOrderCore`
+
+Uygulama notu:
+- SQLite decimal `Sum` cevirisinde EF kisiti oldugu icin siparis toplam guncellemesi istemci tarafinda toplama ile cozuldu
+- bu karar test uyumlulugu ve sadelik icin secildi
+
+Durum:
+- `dotnet build PanoPos.sln` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 38 test gecti
+- `AddOrderCore` migration'i SQL'e uygulandi

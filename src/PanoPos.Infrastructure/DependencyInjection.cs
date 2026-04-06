@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using PanoPos.Application.Auth;
 using PanoPos.Application.Cash;
 using PanoPos.Application.Customer;
+using PanoPos.Application.Order;
 using PanoPos.Application.Product;
 using PanoPos.Application.Restaurant;
 using PanoPos.Infrastructure.Auth;
 using PanoPos.Infrastructure.Cash;
 using PanoPos.Infrastructure.Customer;
+using PanoPos.Infrastructure.Order;
 using PanoPos.Infrastructure.Persistence;
 using PanoPos.Infrastructure.Product;
 using PanoPos.Infrastructure.Restaurant;
@@ -37,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ICariServisi, CariServisi>();
         services.AddScoped<IMasaServisi, MasaServisi>();
         services.AddScoped<IAdisyonServisi, AdisyonServisi>();
+        services.AddScoped<ISiparisServisi, SiparisServisi>();
         services.AddScoped<IUrunServisi, UrunServisi>();
         services.AddScoped<IBarkodServisi, BarkodServisi>();
         services.AddScoped<IRenkServisi, RenkServisi>();
@@ -45,3 +48,4 @@ public static class DependencyInjection
         return services;
     }
 }
+

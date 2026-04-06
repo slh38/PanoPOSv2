@@ -90,9 +90,20 @@ Ileride:
 
 Temel akis:
 1. masa siparisi veya bekleyen hizli satis `Siparis` olarak tutulur
-2. islem tamamlaninca `Fatura` olusur
-3. tahsilat alinir
-4. odeme turune gore finans hareketleri yazilir
+2. satirlar `SiparisDetay` tablosunda tutulur
+3. islem tamamlaninca `Fatura` olusur
+4. tahsilat alinir
+5. odeme turune gore finans hareketleri yazilir
+
+Siparis tipleri:
+- `Masa`
+- `HizliSatisBekleyen`
+
+Siparis kurallari:
+- masa siparisinde `AdisyonId` zorunludur
+- hizli satis bekleyende `AdisyonId` bos olabilir
+- siparis toplami satirlardan hesaplanir
+- siparis fiziksel olarak silinmez, durum ile yonetilir
 
 Bagli hareketler:
 - nakitse `KasaHareket`
@@ -172,5 +183,6 @@ Tablo:
 
 Ileride:
 - IslemLogDetay
+
 
 
