@@ -39,18 +39,24 @@ public sealed class TahsilatServisi : ITahsilatServisi
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Fatura ile sube bilgisi uyusmuyor.", "payment_branch_mismatch");
         }
 
+        if (fatura.Durum == FaturaDurumu.Iptal || fatura.Durum == FaturaDurumu.Iade)
+        {
+            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Iptal veya iade faturadan tahsilat alinamaz.", "invoice_not_collectible");
+        }
+
         if (fatura.Durum != FaturaDurumu.Acik)
         {
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Sadece acik faturadan tahsilat alinabilir.", "invoice_not_open");
         }
 
-        var mevcutTahsilatVar = await _dbContext.Tahsilatlar.AnyAsync(x => x.FaturaId == request.FaturaId, cancellationToken);
-        if (mevcutTahsilatVar)
-        {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Bu fatura icin tahsilat zaten alinmis.", "payment_already_exists");
-        }
-
         FaturaUyumlulukKontrolu(fatura, request);
+
+        var mevcutToplamTahsilat = await FaturaTahsilatToplaminiHesaplaAsync(request.FaturaId, cancellationToken);
+        var yeniToplamTahsilat = mevcutToplamTahsilat + request.Tutar;
+        if (yeniToplamTahsilat > fatura.NetToplam)
+        {
+            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
+        }
 
         var kullaniciVar = await _dbContext.Kullanicilar.AnyAsync(x => x.Id == request.KullaniciId, cancellationToken);
         if (!kullaniciVar)
@@ -106,10 +112,8 @@ public sealed class TahsilatServisi : ITahsilatServisi
                 throw new UygulamaHatasi(400, "Gecersiz istek", "Desteklenmeyen odeme tipi.", "payment_type_invalid");
         }
 
-        fatura.Durum = FaturaDurumu.Kapali;
-        fatura.KapanisTarihi = tahsilatTarihi;
-        fatura.KapatanKullaniciId = request.KullaniciId;
-        fatura.AktifMi = false;
+        var toplamTahsilat = await FaturaTahsilatToplaminiHesaplaAsync(fatura.Id, cancellationToken);
+        FaturaDurumunuGuncelle(fatura, toplamTahsilat, tahsilatTarihi, request.KullaniciId);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -130,7 +134,10 @@ public sealed class TahsilatServisi : ITahsilatServisi
                 tahsilat.ParaBirimKodu,
                 tahsilat.Kur,
                 tahsilat.Tutar,
-                tahsilat.YerelTutar
+                tahsilat.YerelTutar,
+                fatura.OdenenTutar,
+                fatura.KalanTutar,
+                fatura.Durum
             })
         }, cancellationToken);
 
@@ -141,7 +148,10 @@ public sealed class TahsilatServisi : ITahsilatServisi
 
     public async Task<TahsilatDto> TahsilatGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var tahsilat = await _dbContext.Tahsilatlar.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var tahsilat = await _dbContext.Tahsilatlar
+            .AsNoTracking()
+            .Include(x => x.Fatura)
+            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Tahsilat bulunamadi", "Tahsilat bulunamadi.", "payment_not_found");
 
         return new TahsilatDto
@@ -154,6 +164,9 @@ public sealed class TahsilatServisi : ITahsilatServisi
             Kur = tahsilat.Kur,
             Tutar = tahsilat.Tutar,
             YerelTutar = tahsilat.YerelTutar,
+            FaturaOdenenTutar = tahsilat.Fatura?.OdenenTutar ?? 0m,
+            FaturaKalanTutar = tahsilat.Fatura?.KalanTutar ?? 0m,
+            FaturaDurumu = tahsilat.Fatura?.Durum ?? FaturaDurumu.Acik,
             Aciklama = tahsilat.Aciklama,
             TahsilatTarihi = tahsilat.TahsilatTarihi,
             AktifMi = tahsilat.AktifMi
@@ -355,11 +368,43 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         {
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat kuru fatura ile ayni olmalidir.", "payment_rate_mismatch");
         }
+    }
 
-        if (fatura.NetToplam != request.Tutar)
+    private async Task<decimal> FaturaTahsilatToplaminiHesaplaAsync(long faturaId, CancellationToken cancellationToken)
+    {
+        var tahsilatlar = await _dbContext.Tahsilatlar
+            .Where(x => x.FaturaId == faturaId && x.AktifMi)
+            .Select(x => x.Tutar)
+            .ToListAsync(cancellationToken);
+
+        return tahsilatlar.Sum();
+    }
+
+    private static void FaturaDurumunuGuncelle(Fatura fatura, decimal toplamTahsilat, DateTime kapanisTarihi, long kullaniciId)
+    {
+        toplamTahsilat = Math.Round(toplamTahsilat, 2, MidpointRounding.AwayFromZero);
+        var kalanTutar = Math.Round(fatura.NetToplam - toplamTahsilat, 2, MidpointRounding.AwayFromZero);
+        if (kalanTutar < 0)
         {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Ilk surumde sadece tam tahsilat kabul edilir.", "payment_amount_mismatch");
+            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
         }
+
+        fatura.OdenenTutar = toplamTahsilat;
+        fatura.KalanTutar = kalanTutar;
+
+        if (kalanTutar == 0)
+        {
+            fatura.Durum = FaturaDurumu.Kapali;
+            fatura.KapanisTarihi = kapanisTarihi;
+            fatura.KapatanKullaniciId = kullaniciId;
+            fatura.AktifMi = false;
+            return;
+        }
+
+        fatura.Durum = FaturaDurumu.Acik;
+        fatura.KapanisTarihi = null;
+        fatura.KapatanKullaniciId = null;
+        fatura.AktifMi = true;
     }
 
     private async Task<string> TahsilatFisNoUretAsync(Guid tenantId, CancellationToken cancellationToken)
@@ -384,3 +429,4 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
+

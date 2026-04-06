@@ -870,3 +870,61 @@ Durum:
 - toplam 72 test gecti
 - `AddOutboxCore` migration'i SQL'e uygulandi
 
+
+## Prompt 16 - Parcali Tahsilat Revizyonu
+
+Amac:
+- mevcut tahsilat cekirdigini ayni fatura icin birden fazla tahsilati destekleyecek sekilde genisletmek
+- fatura uzerinde odenen ve kalan tutari kalici olarak izlemek
+- nakit, kredi karti ve veresiye kombinasyonlarini bozmadan parcali tahsilat akisini korumak
+
+Revize edilen alanlar:
+- `Fatura`
+  - `OdenenTutar`
+  - `KalanTutar`
+- `TahsilatDto`
+  - `FaturaOdenenTutar`
+  - `FaturaKalanTutar`
+  - `FaturaDurumu`
+- `FaturaDto`
+  - `OdenenTutar`
+  - `KalanTutar`
+- `FaturaListeItemDto`
+  - `OdenenTutar`
+  - `KalanTutar`
+
+Temel kurallar:
+- ayni faturaya birden fazla tahsilat girilebilir
+- her yeni tahsilattan sonra `Fatura.OdenenTutar`, aktif tahsilatlar toplami olarak guncellenir
+- `Fatura.KalanTutar = NetToplam - OdenenTutar` olarak hesaplanir
+- `KalanTutar > 0` ise fatura `Acik` kalir
+- `KalanTutar = 0` ise fatura otomatik `Kapali` olur ve `KapanisTarihi` dolar
+- tahsilat toplami `NetToplam`'i gecerse islem hata verir
+- `ParaBirimKodu` ve `Kur` uyumu fatura ile birebir korunur
+- `YerelTutar = Tutar x Kur` mantigi korunur
+- nakitte `KasaHareket`, kartta `BankaHareket`, veresiyede `CariHareket` uretimi aynen devam eder
+- tahsilat, hareket kaydi ve fatura toplam guncellemesi ayni transaction icinde calisir
+
+Teknik notlar:
+- yeni fatura olustugunda `OdenenTutar = 0` ve `KalanTutar = NetToplam` olarak baslatilir
+- SQLite decimal `Sum` kisiti nedeniyle tahsilat toplam hesabi istemci tarafinda toplama ile yapildi
+- migration icinde mevcut faturalar icin `OdenenTutar` ve `KalanTutar` backfill SQL'i eklendi
+
+Test kapsami:
+- ilk tahsilat sonrasi odenen tutar guncellenir
+- ilk tahsilat sonrasi kalan tutar guncellenir
+- kismi tahsilatta fatura acik kalir
+- ikinci tahsilat sonrasi fatura kapanir
+- tahsilat toplami net toplami gecerse hata verir
+- nakit ve kart parcali tahsilat birlikte calisir
+- veresiye ve nakit kombinasyonu calisir
+
+Migration:
+- `RevisePaymentForPartialCollection`
+- dosya: `20260406184248_RevisePaymentForPartialCollection`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln --no-build` gecti
+- toplam 79 test gecti
+- `RevisePaymentForPartialCollection` migration'i SQL'e uygulandi

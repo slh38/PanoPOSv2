@@ -19,6 +19,8 @@ public sealed class FaturaConfiguration : IEntityTypeConfiguration<Fatura>
         builder.Property(x => x.GenelIndirimOrani).HasColumnType("decimal(5,2)");
         builder.Property(x => x.GenelIndirimTutari).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.NetToplam).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.OdenenTutar).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.KalanTutar).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.ToplamTutar).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.Durum).HasColumnType("smallint").IsRequired();
 

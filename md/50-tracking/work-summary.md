@@ -78,12 +78,14 @@ Kayitli tamamlanmis promptlar:
 - Prompt 13: tahsilat cekirdegi
 - Prompt 14: islemsel audit log cekirdegi
 - Prompt 15: outbox olay cekirdegi
+- Prompt 16: parcali tahsilat revizyonu
 
 Genel durum:
 - backend cekirdek modullerinin buyuk kismi uygulanmis gorunuyor
 - migration kayitlari tutulmus
-- test sayisi son kayitta `72`
+- test sayisi son kayitta `79`
 - siparis, fatura, tahsilat, islemsel audit log ve outbox tarafinda cekirdek omurga tamamlanmis
+- tahsilat cekirdegi artik parcali tahsilat ve coklu odeme kombinasyonlarini destekliyor
 
 ## Siradaki Mantikli Alanlar
 
@@ -103,6 +105,3 @@ Yeni bir is bittiginde en az su iki dosya guncellenmeli:
 
 Bu dosyada kisa ozet tutulur.
 Detayli teknik sonuc, test ve migration bilgisi `implemented-core-steps.md` icinde kalir.
-
-
-

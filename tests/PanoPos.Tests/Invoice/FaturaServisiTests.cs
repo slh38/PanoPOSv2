@@ -48,6 +48,8 @@ public sealed class FaturaServisiTests : IDisposable
 
         Assert.Equal(siparis.Id, fatura.SiparisId);
         Assert.Equal(FaturaDurumu.Acik, fatura.Durum);
+        Assert.Equal(0m, fatura.OdenenTutar);
+        Assert.Equal(fatura.NetToplam, fatura.KalanTutar);
     }
 
     [Fact]
@@ -170,6 +172,8 @@ public sealed class FaturaServisiTests : IDisposable
         Assert.Equal(120m, kayit.AraToplam);
         Assert.Equal(5.40m, kayit.GenelIndirimTutari);
         Assert.Equal(102.60m, kayit.NetToplam);
+        Assert.Equal(0m, kayit.OdenenTutar);
+        Assert.Equal(102.60m, kayit.KalanTutar);
     }
 
     [Fact]
@@ -237,3 +241,5 @@ public sealed class FaturaServisiTests : IDisposable
         _connection.Dispose();
     }
 }
+
+

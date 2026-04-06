@@ -73,6 +73,8 @@ public sealed class FaturaServisi : IFaturaServisi
             GenelIndirimOrani = siparis.GenelIndirimOrani,
             GenelIndirimTutari = siparis.GenelIndirimTutari,
             NetToplam = siparis.NetToplam,
+            OdenenTutar = 0m,
+            KalanTutar = siparis.NetToplam,
             ToplamTutar = siparis.ToplamTutar,
             Durum = FaturaDurumu.Acik,
             AktifMi = true,
@@ -155,6 +157,8 @@ public sealed class FaturaServisi : IFaturaServisi
             GenelIndirimOrani = fatura.GenelIndirimOrani,
             GenelIndirimTutari = fatura.GenelIndirimTutari,
             NetToplam = fatura.NetToplam,
+            OdenenTutar = fatura.OdenenTutar,
+            KalanTutar = fatura.KalanTutar,
             ToplamTutar = fatura.ToplamTutar,
             Durum = fatura.Durum,
             KapanisTarihi = fatura.KapanisTarihi,
@@ -212,7 +216,7 @@ WHERE TenantId = @TenantId
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
-            ? @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, ToplamTutar, Durum, KapanisTarihi
+            ? @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -220,7 +224,7 @@ WHERE TenantId = @TenantId
   AND (@Durum IS NULL OR Durum = @Durum)
 ORDER BY Id DESC
 LIMIT @Take OFFSET @Skip;"
-            : @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, ToplamTutar, Durum, KapanisTarihi
+            : @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -258,6 +262,8 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         }
 
         fatura.Durum = FaturaDurumu.Kapali;
+        fatura.KalanTutar = 0m;
+        fatura.OdenenTutar = fatura.NetToplam;
         fatura.KapanisTarihi = DateTime.UtcNow;
         fatura.KapatanKullaniciId = request.KapatanKullaniciId;
         fatura.AktifMi = false;

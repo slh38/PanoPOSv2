@@ -38,7 +38,7 @@ public sealed class TahsilatServisiTests : IDisposable
     public async Task Nakit_tahsilat_basarili_ve_kasa_hareketi_olusur()
     {
         var kasa = await KasaEkleAsync();
-        var fatura = await FaturaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 150m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
         {
@@ -60,9 +60,6 @@ public sealed class TahsilatServisiTests : IDisposable
         var hareket = await _dbContext.KasaHareketleri.SingleAsync(x => x.ReferansId == tahsilat.Id);
         Assert.Equal(KasaIslemTipi.SatisTahsilat, hareket.IslemTipi);
         Assert.Equal(150m, hareket.Tutar);
-
-        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
-        Assert.Equal(FaturaDurumu.Kapali, guncelFatura.Durum);
     }
 
     [Fact]
@@ -138,9 +135,236 @@ public sealed class TahsilatServisiTests : IDisposable
     }
 
     [Fact]
+    public async Task Ilk_tahsilat_sonrasi_odenen_tutar_guncellenir()
+    {
+        var kasa = await KasaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 400m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
+        Assert.Equal(400m, guncelFatura.OdenenTutar);
+        Assert.Equal(400m, tahsilat.FaturaOdenenTutar);
+    }
+
+    [Fact]
+    public async Task Ilk_tahsilat_sonrasi_kalan_tutar_guncellenir()
+    {
+        var kasa = await KasaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 400m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
+        Assert.Equal(600m, guncelFatura.KalanTutar);
+        Assert.Equal(600m, tahsilat.FaturaKalanTutar);
+    }
+
+    [Fact]
+    public async Task Kismi_tahsilatta_fatura_acik_kalir()
+    {
+        var banka = await BankaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.KrediKarti,
+            BankaId = banka.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 600m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
+        Assert.Equal(FaturaDurumu.Acik, guncelFatura.Durum);
+        Assert.Equal(FaturaDurumu.Acik, tahsilat.FaturaDurumu);
+        Assert.Null(guncelFatura.KapanisTarihi);
+        Assert.True(guncelFatura.AktifMi);
+    }
+
+    [Fact]
+    public async Task Ikinci_tahsilat_sonrasi_fatura_kapanir()
+    {
+        var kasa = await KasaEkleAsync();
+        var banka = await BankaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.KrediKarti,
+            BankaId = banka.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 600m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var ikinciTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 400m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
+        Assert.Equal(1000m, guncelFatura.OdenenTutar);
+        Assert.Equal(0m, guncelFatura.KalanTutar);
+        Assert.Equal(FaturaDurumu.Kapali, guncelFatura.Durum);
+        Assert.NotNull(guncelFatura.KapanisTarihi);
+        Assert.Equal(FaturaDurumu.Kapali, ikinciTahsilat.FaturaDurumu);
+    }
+
+    [Fact]
+    public async Task Tahsilat_toplami_net_toplami_gecerse_hata_verir()
+    {
+        var kasa = await KasaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 700m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var exception = await Assert.ThrowsAsync<UygulamaHatasi>(() => _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 400m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        }));
+
+        Assert.Equal("payment_total_exceeds_invoice", exception.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Nakit_ve_kart_parcali_tahsilat_calisir()
+    {
+        var kasa = await KasaEkleAsync();
+        var banka = await BankaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m);
+
+        var kartTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.KrediKarti,
+            BankaId = banka.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 600m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var nakitTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 400m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        Assert.NotNull(await _dbContext.BankaHareketleri.SingleAsync(x => x.TahsilatId == kartTahsilat.Id));
+        Assert.NotNull(await _dbContext.KasaHareketleri.SingleAsync(x => x.ReferansId == nakitTahsilat.Id));
+        Assert.Equal(2, await _dbContext.Tahsilatlar.CountAsync(x => x.FaturaId == fatura.Id));
+    }
+
+    [Fact]
+    public async Task Veresiye_ve_nakit_kombinasyonu_calisir()
+    {
+        var kasa = await KasaEkleAsync();
+        var cari = await CariEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 1000m, cariId: cari.Id);
+
+        var veresiyeTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Veresiye,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 300m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        var nakitTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
+        {
+            SubeId = 1,
+            FaturaId = fatura.Id,
+            OdemeTipi = OdemeTipi.Nakit,
+            KasaId = kasa.Id,
+            KullaniciId = 1,
+            CihazId = 1,
+            Tutar = 700m,
+            ParaBirimKodu = "TRY",
+            Kur = 1m
+        });
+
+        Assert.NotNull(await _dbContext.CariHareketleri.SingleAsync(x => x.TahsilatId == veresiyeTahsilat.Id));
+        Assert.NotNull(await _dbContext.KasaHareketleri.SingleAsync(x => x.ReferansId == nakitTahsilat.Id));
+
+        var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
+        Assert.Equal(FaturaDurumu.Kapali, guncelFatura.Durum);
+    }
+
+    [Fact]
     public async Task Hareket_olusturma_hatasi_transaction_ile_geri_alinir()
     {
-        var fatura = await FaturaEkleAsync();
+        var fatura = await FaturaEkleAsync(netToplam: 150m);
 
         await Assert.ThrowsAsync<UygulamaHatasi>(() => _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
         {
@@ -158,6 +382,8 @@ public sealed class TahsilatServisiTests : IDisposable
         Assert.False(await _dbContext.Tahsilatlar.AnyAsync(x => x.FaturaId == fatura.Id));
         var guncelFatura = await _dbContext.Faturalar.SingleAsync(x => x.Id == fatura.Id);
         Assert.Equal(FaturaDurumu.Acik, guncelFatura.Durum);
+        Assert.Equal(0m, guncelFatura.OdenenTutar);
+        Assert.Equal(150m, guncelFatura.KalanTutar);
     }
 
     [Fact]
@@ -223,6 +449,8 @@ public sealed class TahsilatServisiTests : IDisposable
             AraToplam = netToplam,
             GenelIndirimTutari = 0,
             NetToplam = netToplam,
+            OdenenTutar = 0m,
+            KalanTutar = netToplam,
             ToplamTutar = netToplam,
             Durum = FaturaDurumu.Acik,
             AktifMi = true,
