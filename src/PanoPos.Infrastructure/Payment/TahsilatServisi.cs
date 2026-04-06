@@ -1,9 +1,12 @@
+using System.Text.Json;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
+using PanoPos.Application.Outbox;
 using PanoPos.Application.Payment;
 using PanoPos.Domain.Entities;
 using PanoPos.Domain.Enums;
+using PanoPos.Infrastructure.Outbox;
 using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Payment;
@@ -11,10 +14,17 @@ namespace PanoPos.Infrastructure.Payment;
 public sealed class TahsilatServisi : ITahsilatServisi
 {
     private readonly PanoPosDbContext _dbContext;
+    private readonly IOutboxServisi _outboxServisi;
 
     public TahsilatServisi(PanoPosDbContext dbContext)
+        : this(dbContext, new BosOutboxServisi())
+    {
+    }
+
+    public TahsilatServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi)
     {
         _dbContext = dbContext;
+        _outboxServisi = outboxServisi;
     }
 
     public async Task<TahsilatDto> TahsilatOlusturAsync(TahsilatOlusturRequestDto request, CancellationToken cancellationToken = default)
@@ -102,6 +112,28 @@ public sealed class TahsilatServisi : ITahsilatServisi
         fatura.AktifMi = false;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _outboxServisi.OlayEkleAsync(new OutboxOlayEkleRequestDto
+        {
+            TenantId = tahsilat.TenantId,
+            SubeId = tahsilat.SubeId,
+            CihazId = request.CihazId,
+            OlayTipi = "TahsilatOlusturuldu",
+            KaynakTablo = nameof(Tahsilat),
+            KaynakId = tahsilat.Id,
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                tahsilat.Id,
+                tahsilat.FaturaId,
+                tahsilat.TahsilatFisNo,
+                tahsilat.OdemeTipi,
+                tahsilat.ParaBirimKodu,
+                tahsilat.Kur,
+                tahsilat.Tutar,
+                tahsilat.YerelTutar
+            })
+        }, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
 
         return await TahsilatGetirAsync(tahsilat.Id, cancellationToken);

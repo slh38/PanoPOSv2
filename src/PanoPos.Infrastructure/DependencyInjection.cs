@@ -1,19 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PanoPos.Application.Audit;
 using PanoPos.Application.Auth;
 using PanoPos.Application.Cash;
 using PanoPos.Application.Customer;
 using PanoPos.Application.Invoice;
 using PanoPos.Application.Order;
+using PanoPos.Application.Outbox;
 using PanoPos.Application.Payment;
 using PanoPos.Application.Product;
 using PanoPos.Application.Restaurant;
+using PanoPos.Infrastructure.Audit;
 using PanoPos.Infrastructure.Auth;
 using PanoPos.Infrastructure.Cash;
 using PanoPos.Infrastructure.Customer;
 using PanoPos.Infrastructure.Invoice;
 using PanoPos.Infrastructure.Order;
+using PanoPos.Infrastructure.Outbox;
 using PanoPos.Infrastructure.Payment;
 using PanoPos.Infrastructure.Persistence;
 using PanoPos.Infrastructure.Product;
@@ -36,8 +40,10 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IPinHashServisi, PinHashServisi>();
+        services.AddScoped<IIslemLogServisi, IslemLogServisi>();
+        services.AddScoped<IOutboxServisi, OutboxServisi>();
         services.AddScoped<IAuthServisi, AuthServisi>();
-        services.AddScoped<IAuthIslemLogServisi, BosAuthIslemLogServisi>();
+        services.AddScoped<IAuthIslemLogServisi, AuthIslemLogServisi>();
         services.AddScoped<IKasaServisi, KasaServisi>();
         services.AddScoped<IVardiyaServisi, VardiyaServisi>();
         services.AddScoped<ICariServisi, CariServisi>();
@@ -55,6 +61,3 @@ public static class DependencyInjection
         return services;
     }
 }
-
-
-

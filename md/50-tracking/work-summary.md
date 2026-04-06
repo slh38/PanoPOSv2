@@ -76,16 +76,20 @@ Kayitli tamamlanmis promptlar:
 - Prompt 11: siparis indirim ve para birimi revizyonu
 - Prompt 12: fatura indirim ve para birimi revizyonu
 - Prompt 13: tahsilat cekirdegi
+- Prompt 14: islemsel audit log cekirdegi
+- Prompt 15: outbox olay cekirdegi
 
 Genel durum:
 - backend cekirdek modullerinin buyuk kismi uygulanmis gorunuyor
 - migration kayitlari tutulmus
-- test sayisi son kayitta `65`
-- siparis, fatura ve tahsilat tarafinda cekirdek akisin ana parcasi tamamlanmis
+- test sayisi son kayitta `72`
+- siparis, fatura, tahsilat, islemsel audit log ve outbox tarafinda cekirdek omurga tamamlanmis
 
 ## Siradaki Mantikli Alanlar
 
 Roadmap ve domain modeline gore sonraki guclu adaylar:
+- islem log servisinin siparis, fatura, tahsilat ve vardiya akislarina yaygin baglanmasi
+- outbox kayitlarinin ileride gercek gonderim isleyicisine baglanmasi
 - vardiya zorunlulugunun isletme ayariyla aktif uygulanmasi
 - rapor ve listeleme endpointlerinin genisletilmesi
 - numara sayac mantigi
@@ -99,4 +103,6 @@ Yeni bir is bittiginde en az su iki dosya guncellenmeli:
 
 Bu dosyada kisa ozet tutulur.
 Detayli teknik sonuc, test ve migration bilgisi `implemented-core-steps.md` icinde kalir.
+
+
 

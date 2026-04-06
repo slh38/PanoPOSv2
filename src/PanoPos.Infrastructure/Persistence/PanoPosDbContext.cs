@@ -35,6 +35,8 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<Banka> Bankalar => Set<Banka>();
     public DbSet<BankaHareket> BankaHareketleri => Set<BankaHareket>();
     public DbSet<Tahsilat> Tahsilatlar => Set<Tahsilat>();
+    public DbSet<IslemLog> IslemLoglari => Set<IslemLog>();
+    public DbSet<OutboxOlay> OutboxOlaylari => Set<OutboxOlay>();
     public DbSet<MasaDurum> MasaDurumlari => Set<MasaDurum>();
     public DbSet<Masa> Masalar => Set<Masa>();
     public DbSet<Adisyon> Adisyonlar => Set<Adisyon>();
@@ -96,6 +98,22 @@ public sealed class PanoPosDbContext : DbContext
     {
         var utcNow = DateTime.UtcNow;
 
+        foreach (var logEntry in ChangeTracker.Entries<IslemLog>())
+        {
+            if (logEntry.State == EntityState.Added && logEntry.Entity.OlusturmaTarihi == default)
+            {
+                logEntry.Entity.OlusturmaTarihi = utcNow;
+            }
+        }
+
+        foreach (var outboxEntry in ChangeTracker.Entries<OutboxOlay>())
+        {
+            if (outboxEntry.State == EntityState.Added && outboxEntry.Entity.OlusturmaTarihi == default)
+            {
+                outboxEntry.Entity.OlusturmaTarihi = utcNow;
+            }
+        }
+
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
             if (entry.State == EntityState.Added)
@@ -135,6 +153,8 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
     }
 }
+
+
 
 
 

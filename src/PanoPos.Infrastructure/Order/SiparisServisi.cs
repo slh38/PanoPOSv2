@@ -1,9 +1,11 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Order;
+using PanoPos.Application.Outbox;
 using PanoPos.Domain.Entities;
 using PanoPos.Domain.Enums;
+using PanoPos.Infrastructure.Outbox;
 using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Order;
@@ -11,10 +13,17 @@ namespace PanoPos.Infrastructure.Order;
 public sealed class SiparisServisi : ISiparisServisi
 {
     private readonly PanoPosDbContext _dbContext;
+    private readonly IOutboxServisi _outboxServisi;
 
     public SiparisServisi(PanoPosDbContext dbContext)
+        : this(dbContext, new BosOutboxServisi())
+    {
+    }
+
+    public SiparisServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi)
     {
         _dbContext = dbContext;
+        _outboxServisi = outboxServisi;
     }
 
     public async Task<SiparisDto> SiparisOlusturAsync(SiparisOlusturRequestDto request, CancellationToken cancellationToken = default)
@@ -398,4 +407,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
+
+
+
 

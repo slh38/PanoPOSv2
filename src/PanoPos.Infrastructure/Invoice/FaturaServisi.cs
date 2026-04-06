@@ -1,9 +1,12 @@
+using System.Text.Json;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Invoice;
+using PanoPos.Application.Outbox;
 using PanoPos.Domain.Entities;
 using PanoPos.Domain.Enums;
+using PanoPos.Infrastructure.Outbox;
 using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Invoice;
@@ -11,10 +14,17 @@ namespace PanoPos.Infrastructure.Invoice;
 public sealed class FaturaServisi : IFaturaServisi
 {
     private readonly PanoPosDbContext _dbContext;
+    private readonly IOutboxServisi _outboxServisi;
 
     public FaturaServisi(PanoPosDbContext dbContext)
+        : this(dbContext, new BosOutboxServisi())
+    {
+    }
+
+    public FaturaServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi)
     {
         _dbContext = dbContext;
+        _outboxServisi = outboxServisi;
     }
 
     public async Task<FaturaDto> SiparistenFaturaOlusturAsync(SiparistenFaturaOlusturRequestDto request, CancellationToken cancellationToken = default)
@@ -98,6 +108,27 @@ public sealed class FaturaServisi : IFaturaServisi
         siparis.AktifMi = false;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _outboxServisi.OlayEkleAsync(new OutboxOlayEkleRequestDto
+        {
+            TenantId = fatura.TenantId,
+            SubeId = fatura.SubeId,
+            CihazId = 1,
+            OlayTipi = "FaturaSiparistenOlusturuldu",
+            KaynakTablo = nameof(Fatura),
+            KaynakId = fatura.Id,
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                fatura.Id,
+                fatura.FaturaNo,
+                fatura.SiparisId,
+                fatura.CariId,
+                fatura.ParaBirimKodu,
+                fatura.Kur,
+                fatura.NetToplam
+            })
+        }, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
 
         return await FaturaGetirAsync(fatura.Id, cancellationToken);

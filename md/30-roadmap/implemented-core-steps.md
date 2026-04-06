@@ -678,3 +678,195 @@ Durum:
 - toplam 65 test gecti
 - `AddPaymentCore` migration'i SQL'e uygulandi
 
+
+## Prompt 14 - Islemsel Audit Log Cekirdegi
+
+Amac:
+- kullanici ve sistem islemlerini SQL uzerinde izlenebilir hale getirmek
+- islemler icin kalici audit kaydi altyapisini kurmak
+- listeleme ve detay ekranlari icin sorgu altyapisini hazirlamak
+- auth tarafindaki login/logout akislarini audit servisine baglamak
+
+Eklenen tablo:
+- `IslemLog`
+
+Alanlar:
+- `Id`
+- `TenantId`
+- `SubeId`
+- `CihazId`
+- `KullaniciId`
+- `ModulAdi`
+- `EkranAdi`
+- `ButonAdi`
+- `IslemTipi`
+- `HedefTablo`
+- `HedefId`
+- `Aciklama`
+- `BasariliMi`
+- `HataKodu`
+- `HataMesaji`
+- `SureMs`
+- `CorrelationId`
+- `OlusturmaTarihi`
+
+Temel kurallar:
+- bu tablo soft delete kullanmaz ve kalici audit tablosudur
+- teknik uygulama loglari dosyada kalir
+- audit listeleme Dapper ile yazildi
+- pagination zorunlu
+- controller icinde is kurali tutulmaz
+- login ve logout olaylari mevcut auth soyutlamasi uzerinden `IslemLog` tablosuna yazilabilir hale getirildi
+- diger servislerin audit baglantisi icin `IIslemLogServisi` hazirlandi
+
+Eklenen servisler:
+- `IIslemLogServisi`
+- `IslemLogServisi`
+- `AuthIslemLogServisi`
+
+Servis metotlari:
+- `LogEkleAsync`
+- `ListeleAsync`
+- `DetayGetirAsync`
+
+Eklenen DTO'lar:
+- `IslemLogDto`
+- `IslemLogListeItemDto`
+- `IslemLogListeRequestDto`
+- `IslemLogEkleRequestDto`
+
+Eklenen endpointler:
+- `GET /api/v1/log/islem?subeId=...&kullaniciId=...&islemTipi=...&basariliMi=...&page=&pageSize=`
+- `GET /api/v1/log/islem/{id}`
+
+Listeleme davranisi:
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `ModulAdi`
+  - `EkranAdi`
+  - `ButonAdi`
+  - `IslemTipi`
+  - `HedefTablo`
+  - `HedefId`
+  - `BasariliMi`
+  - `HataKodu`
+  - `KullaniciId`
+  - `CihazId`
+  - `OlusturmaTarihi`
+- filtreler:
+  - `SubeId`
+  - `KullaniciId`
+  - `IslemTipi`
+  - `BasariliMi`
+
+Indexler:
+- `IslemLog (TenantId, SubeId, OlusturmaTarihi DESC)`
+- `IslemLog (TenantId, KullaniciId, OlusturmaTarihi DESC)`
+- `IslemLog (TenantId, BasariliMi, OlusturmaTarihi DESC)`
+
+Test kapsami:
+- log eklenir
+- log filtreli listelenir
+- log detay getirilir
+
+Migration:
+- `AddAuditLogCore`
+- dosya: `20260406180158_AddAuditLogCore`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 68 test gecti
+- `AddAuditLogCore` migration'i olusturuldu
+
+## Prompt 15 - Outbox Olay Cekirdegi
+
+Amac:
+- offline ve ileride merkez senkron icin kalici olay kaydi altyapisini hazirlamak
+- siparis, siparisten fatura ve tahsilat akislarinda olay uretilebilir temel yapiyi kurmak
+- gonderim durumu ve hata takibini veritabaninda tutmak
+
+Eklenen tablo:
+- `OutboxOlay`
+
+Alanlar:
+- `Id`
+- `TenantId`
+- `SubeId`
+- `CihazId`
+- `OlayTipi`
+- `KaynakTablo`
+- `KaynakId`
+- `PayloadJson`
+- `Durum`
+- `DenemeSayisi`
+- `OlusturmaTarihi`
+- `GonderimTarihi`
+- `SonHataMesaji`
+
+Temel kurallar:
+- gercek sync mekanizmasi yazilmadi
+- sadece kalici olay kaydi uretilir
+- tablo soft delete kullanmaz
+- olay listesi Dapper ile ve pagination zorunlu olacak sekilde yazildi
+- siparis olusturma, siparisten fatura olusturma ve tahsilat akislarinda outbox kaydi olusturulacak alt yapi eklendi
+- gonderildi isaretleme ve hata isaretleme servis uzerinden yapilir
+
+Eklenen enum:
+- `OutboxDurumu`
+  - `Bekliyor`
+  - `Gonderildi`
+  - `Hata`
+
+Eklenen servisler:
+- `IOutboxServisi`
+- `OutboxServisi`
+- `BosOutboxServisi`
+
+Servis metotlari:
+- `OlayEkleAsync`
+- `BekleyenleriListeleAsync`
+- `GonderildiIsaretleAsync`
+- `HataIsaretleAsync`
+- `GetirAsync`
+
+Eklenen DTO'lar:
+- `OutboxOlayDto`
+- `OutboxListeItemDto`
+- `OutboxOlayEkleRequestDto`
+
+Eklenen endpointler:
+- `GET /api/v1/outbox?subeId=...&durum=...&page=&pageSize=`
+- `GET /api/v1/outbox/{id}`
+
+Listeleme davranisi:
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `OlayTipi`
+  - `KaynakTablo`
+  - `KaynakId`
+  - `Durum`
+  - `DenemeSayisi`
+  - `OlusturmaTarihi`
+  - `GonderimTarihi`
+
+Indexler:
+- `OutboxOlay (TenantId, SubeId, Durum, OlusturmaTarihi)`
+- `OutboxOlay (KaynakTablo, KaynakId)`
+
+Test kapsami:
+- olay eklenir
+- bekleyenler filtrelenir
+- gonderildi isaretlenir
+- hata isaretlenir
+
+Migration:
+- `AddOutboxCore`
+- dosya: `20260406182055_AddOutboxCore`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 72 test gecti
+- `AddOutboxCore` migration'i SQL'e uygulandi
+

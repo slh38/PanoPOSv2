@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PanoPos.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using PanoPos.Infrastructure.Persistence;
 namespace PanoPos.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PanoPosDbContext))]
-    partial class PanoPosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260406180158_AddAuditLogCore")]
+    partial class AddAuditLogCore
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1385,67 +1388,6 @@ namespace PanoPos.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PanoPos.Domain.Entities.OutboxOlay", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("CihazId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("DenemeSayisi")
-                        .HasColumnType("int");
-
-                    b.Property<short>("Durum")
-                        .HasColumnType("smallint");
-
-                    b.Property<DateTime?>("GonderimTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("KaynakId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("KaynakTablo")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("OlayTipi")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("OlusturmaTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SonHataMesaji")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<long>("SubeId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CihazId");
-
-                    b.HasIndex("KaynakTablo", "KaynakId");
-
-                    b.HasIndex("TenantId", "SubeId", "Durum", "OlusturmaTarihi");
-
-                    b.ToTable("OutboxOlay", (string)null);
-                });
-
             modelBuilder.Entity("PanoPos.Domain.Entities.Renk", b =>
                 {
                     b.Property<long>("Id")
@@ -2516,17 +2458,6 @@ namespace PanoPos.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("MasaDurum");
-                });
-
-            modelBuilder.Entity("PanoPos.Domain.Entities.OutboxOlay", b =>
-                {
-                    b.HasOne("PanoPos.Domain.Entities.Cihaz", "Cihaz")
-                        .WithMany()
-                        .HasForeignKey("CihazId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Cihaz");
                 });
 
             modelBuilder.Entity("PanoPos.Domain.Entities.Siparis", b =>
