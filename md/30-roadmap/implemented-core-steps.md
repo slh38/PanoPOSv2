@@ -1,4 +1,4 @@
-﻿# Uygulanan Cekirdek Adimlar
+# Uygulanan Cekirdek Adimlar
 
 Bu dosya, prompt bazli tamamlanan cekirdek adimlari ve teknik sonucunu kayit altinda tutar.
 
@@ -442,3 +442,74 @@ Durum:
 - `dotnet test PanoPos.sln` gecti
 - toplam 44 test gecti
 - `AddInvoiceCore` migration'i SQL'e uygulandi
+
+## Prompt 11 - Siparis Indirim ve Para Birimi Revizyonu
+
+Amac:
+- mevcut siparis cekirdigine satir bazli indirim eklemek
+- siparis geneli indirim yapisini eklemek
+- para birimi ve kur destegiyle siparisi coklu para birimine hazir hale getirmek
+- mevcut endpointleri bozmadan siparis hesap mantigini genisletmek
+
+Revize edilen alanlar:
+- `Siparis`
+  - `ParaBirimKodu`
+  - `Kur`
+  - `AraToplam`
+  - `GenelIndirimOrani`
+  - `GenelIndirimTutari`
+  - `NetToplam`
+- `SiparisDetay`
+  - `SatirAraToplam`
+  - `IndirimOrani`
+  - `IndirimTutari`
+  - `SatirNetToplam`
+
+Temel kurallar:
+- siparis `TRY`, `USD`, `EUR` gibi para birimleriyle acilabilir
+- `Kur` zorunludur ve `0`'dan buyuk olmalidir
+- ayni satirda hem `IndirimOrani` hem `IndirimTutari` dolu olamaz
+- ayni sipariste hem `GenelIndirimOrani` hem `GenelIndirimTutari` dolu olamaz
+- `SatirAraToplam = Miktar x BirimFiyat`
+- `SatirNetToplam = SatirAraToplam - IndirimTutari`
+- `AraToplam` tum satirlarin brut toplami uzerinden hesaplanir
+- `NetToplam`, satir net toplamlari uzerinden genel indirim dusulerek hesaplanir
+- `NetToplam` negatif olamaz
+
+Geriye uyumluluk notu:
+- mevcut kullanimlari bozmamak icin `Siparis.ToplamTutar = NetToplam` tutuldu
+- mevcut kullanimlari bozmamak icin `SiparisDetay.SatirToplam = SatirNetToplam` tutuldu
+
+Listeleme davranisi:
+- mevcut Dapper listeleme sorgusu revize edildi
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `SiparisNo`
+  - `SiparisTipi`
+  - `Durum`
+  - `ParaBirimKodu`
+  - `Kur`
+  - `AraToplam`
+  - `GenelIndirimTutari`
+  - `NetToplam`
+  - `OlusturmaTarihi`
+
+Test kapsami:
+- satir indiriminin oranla hesaplanmasi
+- satir indiriminin tutarla hesaplanmasi
+- ayni satirda oran ve tutarin birlikte verilmesinin engellenmesi
+- siparis geneli indirim oraninin calismasi
+- siparis geneli indirim tutarinin calismasi
+- ayni sipariste oran ve tutarin birlikte verilmesinin engellenmesi
+- para birimi ve kur bilgisinin kaydedilmesi
+- net toplam hesaplamasinin dogrulanmasi
+
+Migration:
+- `ReviseOrderDiscountAndCurrency`
+- dosya: `20260406153211_ReviseOrderDiscountAndCurrency`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 52 test gecti
+- `ReviseOrderDiscountAndCurrency` migration'i SQL'e uygulandi

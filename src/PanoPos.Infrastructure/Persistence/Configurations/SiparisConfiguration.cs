@@ -14,6 +14,12 @@ public sealed class SiparisConfiguration : IEntityTypeConfiguration<Siparis>
         builder.Property(x => x.SiparisNo).HasMaxLength(50).IsRequired();
         builder.Property(x => x.SiparisTipi).HasColumnType("smallint").IsRequired();
         builder.Property(x => x.Aciklama).HasMaxLength(500);
+        builder.Property(x => x.ParaBirimKodu).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Kur).HasColumnType("decimal(18,6)").IsRequired();
+        builder.Property(x => x.AraToplam).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.GenelIndirimOrani).HasColumnType("decimal(5,2)");
+        builder.Property(x => x.GenelIndirimTutari).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.NetToplam).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.ToplamTutar).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.Durum).HasColumnType("smallint").IsRequired();
 

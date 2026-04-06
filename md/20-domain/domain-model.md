@@ -1,4 +1,4 @@
-﻿# Domain Modeli
+# Domain Modeli
 
 ## Ortak Kolonlar
 
@@ -103,7 +103,12 @@ Siparis tipleri:
 Siparis kurallari:
 - masa siparisinde `AdisyonId` zorunludur
 - hizli satis bekleyende `AdisyonId` bos olabilir
-- siparis toplami satirlardan hesaplanir
+- siparis satirlari para birimi ve kur bilgisiyle acilabilir
+- satir bazli indirim oran veya tutar olarak uygulanabilir
+- siparis geneli indirim oran veya tutar olarak uygulanabilir
+- `AraToplam` satir brut toplamlari uzerinden hesaplanir
+- `NetToplam` satir net toplami uzerinden genel indirim dusulerek hesaplanir
+- mevcut uyumluluk icin `ToplamTutar`, `NetToplam` degeriyle ayni tutulur
 - siparis fiziksel olarak silinmez, durum ile yonetilir
 
 Bagli hareketler:
@@ -117,6 +122,13 @@ Tablolar:
 - Fatura
 - FaturaDetay
 - Tahsilat
+
+Siparis alanlari icin notlar:
+- `ParaBirimKodu` ornek olarak `TRY`, `USD`, `EUR` degerlerini tasir
+- `Kur` alani zorunludur
+- `SatirAraToplam = Miktar x BirimFiyat`
+- `SatirNetToplam = SatirAraToplam - IndirimTutari`
+- mevcut uyumluluk icin `SatirToplam`, `SatirNetToplam` ile ayni tutulur
 
 Fatura kurallari:
 - fatura siparisten transaction icinde uretilir
@@ -190,7 +202,3 @@ Tablo:
 
 Ileride:
 - IslemLogDetay
-
-
-
-

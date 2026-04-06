@@ -9,4 +9,8 @@ public sealed class SiparisOlusturRequestDto
     public long? AdisyonId { get; set; }
     public long? CariId { get; set; }
     public string? Aciklama { get; set; }
+    public string ParaBirimKodu { get; set; } = "TRY";
+    public decimal Kur { get; set; }
+    public decimal? GenelIndirimOrani { get; set; }
+    public decimal? GenelIndirimTutari { get; set; }
 }

@@ -130,7 +130,9 @@ public sealed class FaturaServisiTests : IDisposable
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto
         {
             SubeId = 1,
-            SiparisTipi = SiparisTipi.HizliSatisBekleyen
+            SiparisTipi = SiparisTipi.HizliSatisBekleyen,
+            ParaBirimKodu = "TRY",
+            Kur = 1
         });
 
         await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
@@ -149,3 +151,4 @@ public sealed class FaturaServisiTests : IDisposable
         _connection.Dispose();
     }
 }
+
