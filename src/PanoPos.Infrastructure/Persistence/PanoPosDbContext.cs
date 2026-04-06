@@ -36,6 +36,8 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<Adisyon> Adisyonlar => Set<Adisyon>();
     public DbSet<Siparis> Siparisler => Set<Siparis>();
     public DbSet<SiparisDetay> SiparisDetaylari => Set<SiparisDetay>();
+    public DbSet<Fatura> Faturalar => Set<Fatura>();
+    public DbSet<FaturaDetay> FaturaDetaylari => Set<FaturaDetay>();
 
     public override int SaveChanges()
     {
@@ -129,4 +131,5 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
     }
 }
+
 

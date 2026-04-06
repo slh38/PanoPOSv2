@@ -1,0 +1,18 @@
+﻿using PanoPos.Domain.Enums;
+
+namespace PanoPos.Application.Invoice;
+
+public sealed class FaturaDto
+{
+    public long Id { get; set; }
+    public string FaturaNo { get; set; } = string.Empty;
+    public long? SiparisId { get; set; }
+    public long? CariId { get; set; }
+    public string? Aciklama { get; set; }
+    public decimal ToplamTutar { get; set; }
+    public FaturaDurumu Durum { get; set; }
+    public DateTime? KapanisTarihi { get; set; }
+    public long? KapatanKullaniciId { get; set; }
+    public bool AktifMi { get; set; }
+    public List<FaturaDetayDto> Detaylar { get; set; } = new();
+}

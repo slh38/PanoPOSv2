@@ -91,9 +91,10 @@ Ileride:
 Temel akis:
 1. masa siparisi veya bekleyen hizli satis `Siparis` olarak tutulur
 2. satirlar `SiparisDetay` tablosunda tutulur
-3. islem tamamlaninca `Fatura` olusur
-4. tahsilat alinir
-5. odeme turune gore finans hareketleri yazilir
+3. siparis faturaya donustugunde detaylar `FaturaDetay` tablosuna snapshot olarak kopyalanir
+4. islem tamamlaninca `Fatura` olusur
+5. tahsilat alinir
+6. odeme turune gore finans hareketleri yazilir
 
 Siparis tipleri:
 - `Masa`
@@ -116,6 +117,12 @@ Tablolar:
 - Fatura
 - FaturaDetay
 - Tahsilat
+
+Fatura kurallari:
+- fatura siparisten transaction icinde uretilir
+- siparis detaylari faturaya snapshot olarak kopyalanir
+- siparis durumu `Tamamlandi` olur
+- fatura fiziksel olarak silinmez, durum ile yonetilir
 - Kasa
 - KasaHareket
 - Banka
@@ -183,6 +190,7 @@ Tablo:
 
 Ileride:
 - IslemLogDetay
+
 
 
 

@@ -363,3 +363,82 @@ Durum:
 - `dotnet test PanoPos.sln` gecti
 - toplam 38 test gecti
 - `AddOrderCore` migration'i SQL'e uygulandi
+
+## Prompt 10 - Fatura Cekirdegi
+
+Amac:
+- siparisten faturaya gecis akisini kurmak
+- siparis detaylarini faturaya snapshot olarak tasimak
+- fatura durum yonetimini transaction icinde guvenli sekilde uygulamak
+
+Eklenen tablolar:
+- `Fatura`
+- `FaturaDetay`
+
+Temel kurallar:
+- fatura siparisten uretilebilir
+- siparisten faturaya geciste detaylar snapshot olarak kopyalanir
+- islem transaction icinde calisir
+- islem sonunda siparis durumu `Tamamlandi` olur
+- fatura fiziksel olarak silinmez, durum ile yonetilir
+- soft delete filtreleri aktif kalir
+
+Enum:
+- `FaturaDurumu`
+  - `Acik`
+  - `Kapali`
+  - `Iptal`
+  - `Iade`
+
+Eklenen servis:
+- `IFaturaServisi`
+- `FaturaServisi`
+
+Servis metotlari:
+- `SiparistenFaturaOlusturAsync`
+- `FaturaGetirAsync`
+- `FaturaListeleAsync`
+- `FaturaKapatAsync`
+- `FaturaIptalAsync`
+
+Eklenen endpointler:
+- `POST /api/v1/fatura/olustur-siparisten`
+- `GET /api/v1/fatura/{id}`
+- `GET /api/v1/fatura?subeId=...&durum=...&page=&pageSize=`
+- `POST /api/v1/fatura/{id}/kapat`
+- `POST /api/v1/fatura/{id}/iptal`
+
+Listeleme davranisi:
+- Dapper kullanildi
+- pagination zorunlu
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `FaturaNo`
+  - `SiparisId`
+  - `ToplamTutar`
+  - `Durum`
+  - `KapanisTarihi`
+
+Indexler:
+- `Fatura (TenantId, SubeId, Durum)`
+- `Fatura (TenantId, FaturaNo)`
+- `Fatura (SiparisId)`
+- `FaturaDetay (FaturaId)`
+
+Test kapsami:
+- siparisten fatura olusturma
+- detay snapshot kopyasi
+- siparis durumunun guncellenmesi
+- fatura kapatma
+- fatura iptali
+- sayfali listeleme
+
+Migration:
+- `AddInvoiceCore`
+- dosya: `20260406151457_AddInvoiceCore`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln` gecti
+- toplam 44 test gecti
+- `AddInvoiceCore` migration'i SQL'e uygulandi
