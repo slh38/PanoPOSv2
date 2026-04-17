@@ -678,7 +678,6 @@ Durum:
 - toplam 65 test gecti
 - `AddPaymentCore` migration'i SQL'e uygulandi
 
-
 ## Prompt 14 - Islemsel Audit Log Cekirdegi
 
 Amac:
@@ -870,7 +869,6 @@ Durum:
 - toplam 72 test gecti
 - `AddOutboxCore` migration'i SQL'e uygulandi
 
-
 ## Prompt 16 - Parcali Tahsilat Revizyonu
 
 Amac:
@@ -928,3 +926,84 @@ Durum:
 - `dotnet test PanoPos.sln --no-build` gecti
 - toplam 79 test gecti
 - `RevisePaymentForPartialCollection` migration'i SQL'e uygulandi
+
+## Prompt 17 - Urun Kategori ve Grup Revizyonu
+
+Amac:
+- mevcut urun cekirdigine kategori ve grup destegi eklemek
+- satis ekrani siniflamasi ile yonetsel siniflamayi ayri kavramlar olarak tanimlamak
+- urun listeleme ekraninda kategori ve grup adlarini gostermek
+
+Eklenen tablolar:
+- `UrunKategori`
+- `UrunGrup`
+
+Revize edilen alanlar:
+- `Urun`
+  - `UrunKategoriId`
+  - `UrunGrupId`
+- `UrunDto`
+  - `UrunKategoriId`
+  - `UrunKategoriAd`
+  - `UrunGrupId`
+  - `UrunGrupAd`
+- `UrunListeItemDto`
+  - `UrunKategoriId`
+  - `UrunKategoriAd`
+  - `UrunGrupId`
+  - `UrunGrupAd`
+- `UrunOlusturRequestDto`
+  - `UrunKategoriId`
+  - `UrunGrupId`
+- `UrunGuncelleRequestDto`
+  - `UrunKategoriId`
+  - `UrunGrupId`
+
+Temel kurallar:
+- kategori urunun satis ekrani siniflamasinda kullanilir
+- grup yonetsel siniflama icin kullanilir
+- ayni tenant icinde kategori kodu tekrar etmez
+- ayni tenant icinde grup kodu tekrar etmez
+- kategori ve grup urun icin opsiyoneldir
+- soft delete filtreleri kategori ve grup tablolarinda da aktif kalir
+
+Eklenen servisler:
+- `IUrunKategoriServisi`
+- `UrunKategoriServisi`
+- `IUrunGrupServisi`
+- `UrunGrupServisi`
+
+Eklenen endpointler:
+- `POST /api/v1/urun-kategori`
+- `GET /api/v1/urun-kategori`
+- `POST /api/v1/urun-grup`
+- `GET /api/v1/urun-grup`
+
+Listeleme davranisi:
+- `GET /api/v1/urun` Dapper sorgusu revize edildi
+- sadece gerekli kolonlar doner:
+  - `Id`
+  - `UrunKodu`
+  - `Ad`
+  - `UrunTipi`
+  - `UrunKategoriId`
+  - `UrunKategoriAd`
+  - `UrunGrupId`
+  - `UrunGrupAd`
+  - `AktifMi`
+
+Test kapsami:
+- kategori olusturulur
+- grup olusturulur
+- urun kategori ve grup ile kaydedilir
+- urun listelemede kategori ve grup gorunur
+
+Migration:
+- `ReviseProductWithCategoryAndGroup`
+- dosya: `20260417184507_ReviseProductWithCategoryAndGroup`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln --no-build` gecti
+- toplam 83 test gecti
+- `ReviseProductWithCategoryAndGroup` migration'i SQL'e uygulandi

@@ -173,18 +173,27 @@ Gereksinimler:
 - varyantli urun
 - renk / beden
 - varyantlara ayri barkod
+- kategori bazli satis ekrani siniflamasi
+- grup bazli yonetsel siniflama
 - ileride terazi barkodu
 - ileride recete ve uretim destegi
 
 Tablolar:
 - Urun
+- UrunKategori
+- UrunGrup
 - Renk
 - Beden
 - UrunVaryant
 - Barkod
 
-Kural:
+Kurallar:
 - Barkod ya urune bagli olur ya varyanta bagli olur.
+- kategori urunun satis ekrani siniflamasinda kullanilir
+- grup yonetsel siniflama icin kullanilir
+- ayni tenant icinde kategori kodu tekrar etmez
+- ayni tenant icinde grup kodu tekrar etmez
+- urun kaydinda kategori ve grup opsiyoneldir
 
 ## Audit ve Log
 

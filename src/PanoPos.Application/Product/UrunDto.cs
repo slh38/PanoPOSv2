@@ -9,6 +9,10 @@ public sealed class UrunDto
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
     public UrunTipi UrunTipi { get; set; }
+    public long? UrunKategoriId { get; set; }
+    public string? UrunKategoriAd { get; set; }
+    public long? UrunGrupId { get; set; }
+    public string? UrunGrupAd { get; set; }
     public bool AktifMi { get; set; }
     public List<UrunVaryantDto> Varyantlar { get; set; } = new();
     public List<BarkodDto> Barkodlar { get; set; } = new();

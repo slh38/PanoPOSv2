@@ -57,6 +57,8 @@ public static class DependencyInjection
         services.AddScoped<IBarkodServisi, BarkodServisi>();
         services.AddScoped<IRenkServisi, RenkServisi>();
         services.AddScoped<IBedenServisi, BedenServisi>();
+        services.AddScoped<IUrunKategoriServisi, UrunKategoriServisi>();
+        services.AddScoped<IUrunGrupServisi, UrunGrupServisi>();
 
         return services;
     }

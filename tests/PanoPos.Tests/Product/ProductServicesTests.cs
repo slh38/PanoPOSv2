@@ -18,6 +18,8 @@ public sealed class ProductServicesTests : IDisposable
     private readonly BarkodServisi _barkodServisi;
     private readonly RenkServisi _renkServisi;
     private readonly BedenServisi _bedenServisi;
+    private readonly UrunKategoriServisi _urunKategoriServisi;
+    private readonly UrunGrupServisi _urunGrupServisi;
 
     public ProductServicesTests()
     {
@@ -36,6 +38,8 @@ public sealed class ProductServicesTests : IDisposable
         _barkodServisi = new BarkodServisi(_dbContext);
         _renkServisi = new RenkServisi(_dbContext);
         _bedenServisi = new BedenServisi(_dbContext);
+        _urunKategoriServisi = new UrunKategoriServisi(_dbContext);
+        _urunGrupServisi = new UrunGrupServisi(_dbContext);
     }
 
     [Fact]
@@ -51,6 +55,81 @@ public sealed class ProductServicesTests : IDisposable
 
         Assert.Equal("Kola", urun.Ad);
         Assert.Equal("URN-001", urun.UrunKodu);
+    }
+
+    [Fact]
+    public async Task Kategori_olusturulur()
+    {
+        var kategori = await _urunKategoriServisi.OlusturAsync(new UrunKategoriOlusturRequestDto
+        {
+            SubeId = 1,
+            Ad = "Icecek",
+            Kod = "ICECEK"
+        });
+
+        Assert.Equal("Icecek", kategori.Ad);
+        Assert.Equal("ICECEK", kategori.Kod);
+    }
+
+    [Fact]
+    public async Task Grup_olusturulur()
+    {
+        var grup = await _urunGrupServisi.OlusturAsync(new UrunGrupOlusturRequestDto
+        {
+            SubeId = 1,
+            Ad = "Hizli Tuketim",
+            Kod = "HT"
+        });
+
+        Assert.Equal("Hizli Tuketim", grup.Ad);
+        Assert.Equal("HT", grup.Kod);
+    }
+
+    [Fact]
+    public async Task Urun_kategori_ve_grup_ile_kaydedilir()
+    {
+        var kategori = await _urunKategoriServisi.OlusturAsync(new UrunKategoriOlusturRequestDto { SubeId = 1, Ad = "Icecek", Kod = "ICECEK" });
+        var grup = await _urunGrupServisi.OlusturAsync(new UrunGrupOlusturRequestDto { SubeId = 1, Ad = "Soguk", Kod = "SOGUK" });
+
+        var urun = await _urunServisi.UrunOlusturAsync(new UrunOlusturRequestDto
+        {
+            SubeId = 1,
+            UrunKodu = "URN-KTG-001",
+            Ad = "Kola",
+            UrunTipi = UrunTipi.Mamul,
+            UrunKategoriId = kategori.Id,
+            UrunGrupId = grup.Id
+        });
+
+        Assert.Equal(kategori.Id, urun.UrunKategoriId);
+        Assert.Equal("Icecek", urun.UrunKategoriAd);
+        Assert.Equal(grup.Id, urun.UrunGrupId);
+        Assert.Equal("Soguk", urun.UrunGrupAd);
+    }
+
+    [Fact]
+    public async Task Urun_listelemede_kategori_ve_grup_gorunur()
+    {
+        var kategori = await _urunKategoriServisi.OlusturAsync(new UrunKategoriOlusturRequestDto { SubeId = 1, Ad = "Atistirmalik", Kod = "ATS" });
+        var grup = await _urunGrupServisi.OlusturAsync(new UrunGrupOlusturRequestDto { SubeId = 1, Ad = "Market", Kod = "MRK" });
+
+        await _urunServisi.UrunOlusturAsync(new UrunOlusturRequestDto
+        {
+            SubeId = 1,
+            UrunKodu = "URN-LIST-001",
+            Ad = "Cips",
+            UrunTipi = UrunTipi.Mamul,
+            UrunKategoriId = kategori.Id,
+            UrunGrupId = grup.Id
+        });
+
+        var liste = await _urunServisi.UrunListeleAsync("Cips", 1, 10);
+
+        var kayit = Assert.Single(liste.Kayitlar);
+        Assert.Equal(kategori.Id, kayit.UrunKategoriId);
+        Assert.Equal("Atistirmalik", kayit.UrunKategoriAd);
+        Assert.Equal(grup.Id, kayit.UrunGrupId);
+        Assert.Equal("Market", kayit.UrunGrupAd);
     }
 
     [Fact]

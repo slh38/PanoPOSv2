@@ -16,6 +16,16 @@ public sealed class UrunConfiguration : IEntityTypeConfiguration<Urun>
         builder.Property(x => x.Aciklama).HasMaxLength(500);
         builder.Property(x => x.UrunTipi).IsRequired();
 
+        builder.HasOne(x => x.UrunKategori)
+            .WithMany()
+            .HasForeignKey(x => x.UrunKategoriId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.UrunGrup)
+            .WithMany()
+            .HasForeignKey(x => x.UrunGrupId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => new { x.TenantId, x.SubeId, x.SilindiMi });
         builder.HasIndex(x => new { x.TenantId, x.UrunKodu }).IsUnique().HasFilter("[UrunKodu] IS NOT NULL");
     }

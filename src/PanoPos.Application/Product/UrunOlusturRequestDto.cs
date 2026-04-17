@@ -12,4 +12,6 @@ public sealed class UrunOlusturRequestDto
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
     public UrunTipi UrunTipi { get; set; }
+    public long? UrunKategoriId { get; set; }
+    public long? UrunGrupId { get; set; }
 }

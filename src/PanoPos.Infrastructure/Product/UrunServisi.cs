@@ -27,6 +27,7 @@ public sealed class UrunServisi : IUrunServisi
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         await UrunKoduTekrarKontroluAsync(sube.TenantId, request.UrunKodu, null, cancellationToken);
+        await KategoriVeGrupKontroluAsync(request.UrunKategoriId, request.UrunGrupId, cancellationToken);
 
         var urun = new Urun
         {
@@ -36,6 +37,8 @@ public sealed class UrunServisi : IUrunServisi
             Ad = request.Ad.Trim(),
             Aciklama = NormalizeOptional(request.Aciklama),
             UrunTipi = request.UrunTipi,
+            UrunKategoriId = request.UrunKategoriId,
+            UrunGrupId = request.UrunGrupId,
             AktifMi = true,
             SilindiMi = false
         };
@@ -57,11 +60,14 @@ public sealed class UrunServisi : IUrunServisi
             ?? throw new UygulamaHatasi(404, "Urun bulunamadi", "Urun bulunamadi.", "urun_not_found");
 
         await UrunKoduTekrarKontroluAsync(urun.TenantId, request.UrunKodu, urun.Id, cancellationToken);
+        await KategoriVeGrupKontroluAsync(request.UrunKategoriId, request.UrunGrupId, cancellationToken);
 
         urun.UrunKodu = NormalizeOptional(request.UrunKodu);
         urun.Ad = request.Ad.Trim();
         urun.Aciklama = NormalizeOptional(request.Aciklama);
         urun.UrunTipi = request.UrunTipi;
+        urun.UrunKategoriId = request.UrunKategoriId;
+        urun.UrunGrupId = request.UrunGrupId;
         urun.AktifMi = request.AktifMi;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -71,6 +77,8 @@ public sealed class UrunServisi : IUrunServisi
     public async Task<UrunDto> UrunDetayGetirAsync(long id, CancellationToken cancellationToken = default)
     {
         var urun = await _dbContext.Urunler
+            .Include(x => x.UrunKategori)
+            .Include(x => x.UrunGrup)
             .Include(x => x.Varyantlar.Where(y => y.AktifMi)).ThenInclude(x => x.Renk)
             .Include(x => x.Varyantlar.Where(y => y.AktifMi)).ThenInclude(x => x.Beden)
             .Include(x => x.Barkodlar.Where(y => y.AktifMi))
@@ -84,6 +92,10 @@ public sealed class UrunServisi : IUrunServisi
             Ad = urun.Ad,
             Aciklama = urun.Aciklama,
             UrunTipi = urun.UrunTipi,
+            UrunKategoriId = urun.UrunKategoriId,
+            UrunKategoriAd = urun.UrunKategori?.Ad,
+            UrunGrupId = urun.UrunGrupId,
+            UrunGrupAd = urun.UrunGrup?.Ad,
             AktifMi = urun.AktifMi,
             Barkodlar = urun.Barkodlar.OrderBy(x => x.BarkodNo).Select(x => new BarkodDto
             {
@@ -122,11 +134,29 @@ public sealed class UrunServisi : IUrunServisi
         }
 
         var pattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
-        var countSql = "SELECT COUNT(1) FROM Urun WHERE SilindiMi = 0 AND (@Search IS NULL OR Ad LIKE @Search OR UrunKodu LIKE @Search);";
+        var countSql = @"SELECT COUNT(1)
+FROM Urun u
+WHERE u.SilindiMi = 0
+  AND (@Search IS NULL OR u.Ad LIKE @Search OR u.UrunKodu LIKE @Search);";
+
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
-            ? @"SELECT Id, UrunKodu, Ad, UrunTipi, AktifMi FROM Urun WHERE SilindiMi = 0 AND (@Search IS NULL OR Ad LIKE @Search OR UrunKodu LIKE @Search) ORDER BY Ad LIMIT @Take OFFSET @Skip;"
-            : @"SELECT Id, UrunKodu, Ad, UrunTipi, AktifMi FROM Urun WHERE SilindiMi = 0 AND (@Search IS NULL OR Ad LIKE @Search OR UrunKodu LIKE @Search) ORDER BY Ad OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
+            ? @"SELECT u.Id, u.UrunKodu, u.Ad, u.UrunTipi, u.UrunKategoriId, uk.Ad AS UrunKategoriAd, u.UrunGrupId, ug.Ad AS UrunGrupAd, u.AktifMi
+FROM Urun u
+LEFT JOIN UrunKategori uk ON uk.Id = u.UrunKategoriId AND uk.SilindiMi = 0
+LEFT JOIN UrunGrup ug ON ug.Id = u.UrunGrupId AND ug.SilindiMi = 0
+WHERE u.SilindiMi = 0
+  AND (@Search IS NULL OR u.Ad LIKE @Search OR u.UrunKodu LIKE @Search)
+ORDER BY u.Ad
+LIMIT @Take OFFSET @Skip;"
+            : @"SELECT u.Id, u.UrunKodu, u.Ad, u.UrunTipi, u.UrunKategoriId, uk.Ad AS UrunKategoriAd, u.UrunGrupId, ug.Ad AS UrunGrupAd, u.AktifMi
+FROM Urun u
+LEFT JOIN UrunKategori uk ON uk.Id = u.UrunKategoriId AND uk.SilindiMi = 0
+LEFT JOIN UrunGrup ug ON ug.Id = u.UrunGrupId AND ug.SilindiMi = 0
+WHERE u.SilindiMi = 0
+  AND (@Search IS NULL OR u.Ad LIKE @Search OR u.UrunKodu LIKE @Search)
+ORDER BY u.Ad
+OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
         var parameters = new { Search = pattern, Skip = (page - 1) * pageSize, Take = pageSize };
         var toplamKayit = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: cancellationToken));
@@ -229,6 +259,19 @@ public sealed class UrunServisi : IUrunServisi
         if (exists)
         {
             throw new UygulamaHatasi(409, "Urun hatasi", "Ayni tenant icinde UrunKodu tekrar etmesin.", "urun_kodu_duplicate");
+        }
+    }
+
+    private async Task KategoriVeGrupKontroluAsync(long? urunKategoriId, long? urunGrupId, CancellationToken cancellationToken)
+    {
+        if (urunKategoriId.HasValue && !await _dbContext.UrunKategorileri.AnyAsync(x => x.Id == urunKategoriId.Value, cancellationToken))
+        {
+            throw new UygulamaHatasi(404, "Kategori bulunamadi", "Urun kategorisi bulunamadi.", "urun_kategori_not_found");
+        }
+
+        if (urunGrupId.HasValue && !await _dbContext.UrunGruplari.AnyAsync(x => x.Id == urunGrupId.Value, cancellationToken))
+        {
+            throw new UygulamaHatasi(404, "Grup bulunamadi", "Urun grubu bulunamadi.", "urun_grup_not_found");
         }
     }
 
