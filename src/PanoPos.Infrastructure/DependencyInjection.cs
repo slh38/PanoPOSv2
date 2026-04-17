@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IVardiyaServisi, VardiyaServisi>();
         services.AddScoped<ICariServisi, CariServisi>();
         services.AddScoped<IMasaServisi, MasaServisi>();
+        services.AddScoped<IMasaGrupServisi, MasaGrupServisi>();
         services.AddScoped<IAdisyonServisi, AdisyonServisi>();
         services.AddScoped<IFaturaServisi, FaturaServisi>();
         services.AddScoped<ISiparisServisi, SiparisServisi>();

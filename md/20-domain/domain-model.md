@@ -148,6 +148,7 @@ Fatura kurallari:
 ## Restoran
 
 Tablolar:
+- MasaGrup
 - Masa
 - MasaDurum
 - Adisyon
@@ -158,7 +159,11 @@ Masa durumlari:
 - Rezerve
 
 Temel kurallar:
+- masa bir gruba bagli olabilir
+- masa kapasitesi opsiyonel olarak tanimlanabilir
 - ayni masada ayni anda tek acik adisyon olabilir
+- adisyon acilirken kisi sayisi girilebilir
+- `KisiSayisi` 0 veya negatif olamaz
 - adisyon acilinca masa durumu `Dolu` olur
 - adisyon kapaninca masa durumu `Bos` olur
 - pasif masa icin adisyon acilamaz

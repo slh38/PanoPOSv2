@@ -1007,3 +1007,69 @@ Durum:
 - `dotnet test PanoPos.sln --no-build` gecti
 - toplam 83 test gecti
 - `ReviseProductWithCategoryAndGroup` migration'i SQL'e uygulandi
+
+## Prompt 18 - Restoran Masa Grup ve Kisi Sayisi Revizyonu
+
+Amac:
+- mevcut restoran cekirdigine masa grup destegi eklemek
+- masalara kapasite bilgisi eklemek
+- adisyon acilisinda kisi sayisi bilgisini tutmak
+
+Eklenen tablo:
+- `MasaGrup`
+
+Revize edilen alanlar:
+- `Masa`
+  - `MasaGrupId`
+  - `Kapasite`
+- `Adisyon`
+  - `KisiSayisi`
+- `MasaOlusturRequestDto`
+  - `MasaGrupId`
+  - `Kapasite`
+- `MasaDto`
+  - `MasaGrupId`
+  - `MasaGrupAdi`
+  - `Kapasite`
+- `AdisyonAcRequestDto`
+  - `KisiSayisi`
+- `AdisyonDto`
+  - `KisiSayisi`
+
+Temel kurallar:
+- masa bir gruba bagli olabilir
+- masa kapasitesi opsiyoneldir
+- adisyon acilirken kisi sayisi girilebilir
+- `KisiSayisi` 0 veya negatif olamaz
+- soft delete filtreleri korunur
+- ayni masada ayni anda tek acik adisyon kurali korunur
+
+Eklenen servisler:
+- `IMasaGrupServisi`
+- `MasaGrupServisi`
+
+Eklenen endpointler:
+- `POST /api/v1/masa-grup`
+- `GET /api/v1/masa-grup`
+
+Revize edilen endpoint davranislari:
+- `POST /api/v1/masa` artik `MasaGrupId` ve `Kapasite` alir
+- `GET /api/v1/masa` artik `MasaGrupAdi` ve `Kapasite` doner
+- `POST /api/v1/adisyon/ac` artik `KisiSayisi` alir
+- `GET /api/v1/adisyon/acik` artik `KisiSayisi` doner
+
+Test kapsami:
+- masa grubu olusturulur
+- masa grup ile kaydedilir
+- adisyon acilirken kisi sayisi kaydedilir
+- negatif veya sifir kisi sayisi hata verir
+
+Migration:
+- `ReviseRestaurantWithTableGroupAndGuestCount`
+- dosya: `20260417193614_ReviseRestaurantWithTableGroupAndGuestCount`
+
+Durum:
+- `dotnet build PanoPos.sln --no-restore` gecti
+- `dotnet test PanoPos.sln --no-build` gecti
+- toplam 87 test gecti
+- `ReviseRestaurantWithTableGroupAndGuestCount` migration'i SQL'e uygulandi

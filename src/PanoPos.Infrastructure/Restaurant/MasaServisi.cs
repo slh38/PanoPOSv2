@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Restaurant;
 using PanoPos.Domain.Entities;
@@ -28,8 +28,18 @@ public sealed class MasaServisi : IMasaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Masa kodu ve adi bos olamaz.", "masa_required_fields");
         }
 
+        if (request.Kapasite.HasValue && request.Kapasite.Value <= 0)
+        {
+            throw new UygulamaHatasi(400, "Gecersiz istek", "Kapasite 0'dan buyuk olmalidir.", "masa_capacity_invalid");
+        }
+
         var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
+
+        if (request.MasaGrupId.HasValue && !await _dbContext.MasaGruplari.AnyAsync(x => x.Id == request.MasaGrupId.Value && x.AktifMi, cancellationToken))
+        {
+            throw new UygulamaHatasi(404, "Masa grup bulunamadi", "Masa grup bulunamadi.", "masa_grup_not_found");
+        }
 
         var masa = new Masa
         {
@@ -38,6 +48,8 @@ public sealed class MasaServisi : IMasaServisi
             Kod = request.Kod.Trim(),
             Ad = request.Ad.Trim(),
             MasaDurumId = SystemSeedData.MasaDurumBosId,
+            MasaGrupId = request.MasaGrupId,
+            Kapasite = request.Kapasite,
             AktifMi = true,
             SilindiMi = false
         };
@@ -56,6 +68,9 @@ public sealed class MasaServisi : IMasaServisi
                 Ad = x.Ad,
                 MasaDurumId = x.MasaDurumId,
                 MasaDurumAd = x.MasaDurum!.Ad,
+                MasaGrupId = x.MasaGrupId,
+                MasaGrupAdi = x.MasaGrup != null ? x.MasaGrup.Ad : null,
+                Kapasite = x.Kapasite,
                 AktifMi = x.AktifMi
             })
             .SingleAsync(cancellationToken);
@@ -80,6 +95,9 @@ public sealed class MasaServisi : IMasaServisi
                 Ad = x.Ad,
                 MasaDurumId = x.MasaDurumId,
                 MasaDurumAd = x.MasaDurum!.Ad,
+                MasaGrupId = x.MasaGrupId,
+                MasaGrupAdi = x.MasaGrup != null ? x.MasaGrup.Ad : null,
+                Kapasite = x.Kapasite,
                 AktifMi = x.AktifMi
             })
             .ToListAsync(cancellationToken);

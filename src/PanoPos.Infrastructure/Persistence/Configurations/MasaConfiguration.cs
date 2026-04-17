@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PanoPos.Domain.Entities;
 
@@ -18,6 +18,11 @@ public sealed class MasaConfiguration : IEntityTypeConfiguration<Masa>
         builder.HasOne(x => x.MasaDurum)
             .WithMany(x => x.Masalar)
             .HasForeignKey(x => x.MasaDurumId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.MasaGrup)
+            .WithMany()
+            .HasForeignKey(x => x.MasaGrupId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.TenantId, x.SubeId, x.SilindiMi });

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Restaurant;
 using PanoPos.Domain.Enums;
@@ -21,6 +21,11 @@ public sealed class AdisyonServisi : IAdisyonServisi
         if (request.MasaId <= 0 || request.AcanKullaniciId <= 0 || request.AcanCihazId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "MasaId, AcanKullaniciId ve AcanCihazId zorunludur.", "adisyon_open_invalid_request");
+        }
+
+        if (request.KisiSayisi.HasValue && request.KisiSayisi.Value <= 0)
+        {
+            throw new UygulamaHatasi(400, "Gecersiz istek", "KisiSayisi 0'dan buyuk olmalidir.", "adisyon_guest_count_invalid");
         }
 
         var masa = await _dbContext.Masalar.SingleOrDefaultAsync(x => x.Id == request.MasaId, cancellationToken)
@@ -56,6 +61,7 @@ public sealed class AdisyonServisi : IAdisyonServisi
             MasaId = masa.Id,
             AcanKullaniciId = request.AcanKullaniciId,
             AcanCihazId = request.AcanCihazId,
+            KisiSayisi = request.KisiSayisi,
             AcilisTarihi = DateTime.UtcNow,
             Durum = AdisyonDurumu.Acik,
             Aciklama = string.IsNullOrWhiteSpace(request.Aciklama) ? null : request.Aciklama.Trim(),
@@ -129,6 +135,7 @@ public sealed class AdisyonServisi : IAdisyonServisi
                 MasaAd = x.Masa!.Ad,
                 AcanKullaniciId = x.AcanKullaniciId,
                 AcanCihazId = x.AcanCihazId,
+                KisiSayisi = x.KisiSayisi,
                 AcilisTarihi = x.AcilisTarihi,
                 KapanisTarihi = x.KapanisTarihi,
                 Durum = x.Durum,

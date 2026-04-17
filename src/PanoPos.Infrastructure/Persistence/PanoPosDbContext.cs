@@ -40,6 +40,7 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<IslemLog> IslemLoglari => Set<IslemLog>();
     public DbSet<OutboxOlay> OutboxOlaylari => Set<OutboxOlay>();
     public DbSet<MasaDurum> MasaDurumlari => Set<MasaDurum>();
+    public DbSet<MasaGrup> MasaGruplari => Set<MasaGrup>();
     public DbSet<Masa> Masalar => Set<Masa>();
     public DbSet<Adisyon> Adisyonlar => Set<Adisyon>();
     public DbSet<Siparis> Siparisler => Set<Siparis>();
