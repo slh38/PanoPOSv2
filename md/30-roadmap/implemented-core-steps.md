@@ -1073,3 +1073,110 @@ Durum:
 - `dotnet test PanoPos.sln --no-build` gecti
 - toplam 87 test gecti
 - `ReviseRestaurantWithTableGroupAndGuestCount` migration'i SQL'e uygulandi
+
+## Prompt 19 - Desktop Ilk Iskelet
+
+Amac:
+- backend hazir yapinin uzerine ilk desktop istemciyi kurmak
+- PIN login, ana ekran, merkezi session ve sade API istemcisi ile baslangic akislarini calistirmak
+- is kurallarini backend'de birakip desktop tarafini ince tutmak
+
+Eklenen proje:
+- `src/PanoPos.Desktop`
+
+Eklenen klasorler:
+- `Forms`
+- `Services`
+- `Models`
+- `Session`
+- `Helpers`
+- `Config`
+
+Eklenen temel akislar:
+- `LoginForm`
+- `MainForm`
+- `AppSession`
+- `IApiClient` / `ApiClient`
+- `IAuthService` / `AuthService`
+
+Temel kurallar:
+- PIN login `POST /api/v1/auth/login` uzerinden calisir
+- logout `POST /api/v1/auth/logout` uzerinden calisir
+- form icine dogrudan HTTP kodu yazilmaz
+- config icinden `BaseApiUrl` ve `CihazId` okunur
+- session tek merkezde tutulur
+
+Desktop UI sonucu:
+- dokunmatik odakli sayisal PIN ekranı
+- renkli tile menu ile ana ekran
+- placeholder moduller:
+  - `Restoran`
+  - `Urunler`
+  - `Cariler`
+  - `Faturalar`
+  - `Tahsilatlar`
+  - `Loglar`
+  - `Ayarlar`
+
+Durum:
+- `dotnet build src/PanoPos.Desktop/PanoPos.Desktop.csproj` gecti
+- login ve logout akisi calisir durumda
+
+## Prompt 20 - Desktop Hizli Satis ve Tahsilat Ekranlari
+
+Amac:
+- dokunmatik uyumlu hizli satis ekranini kurmak
+- barkod ve urun karti ile sepet olusturmak
+- sepetten siparis, fatura ve parcali tahsilat akisini masaustu istemciden baslatmak
+
+Eklenen ekranlar:
+- `HizliSatisForm`
+- `TahsilatForm`
+
+Eklenen desktop servisler:
+- `IHizliSatisService`
+- `HizliSatisService`
+- `ITahsilatService`
+- `TahsilatService`
+
+Eklenen desktop modeller:
+- `SepetSatirModel`
+- `UrunKartModel`
+- `BarkodApiModel`
+- `FaturaResponseModel`
+- `TahsilatRequestModel`
+- `TahsilatResponseModel`
+- `SiparistenFaturaOlusturRequestModel`
+- diger yardimci liste / siparis modelleri
+
+Hizli satis akisi:
+- urunler `GET /api/v1/urun` ile yuklenir
+- barkod ile urun ekleme `GET /api/v1/barkod/{barkodNo}` ile calisir
+- ayni urun sepette varsa miktar artar
+- miktar degisince satir net toplam ve genel toplamlar guncellenir
+- `Beklet` ile siparis `POST /api/v1/siparis` ve `POST /api/v1/siparis/{id}/satir` ile kaydedilir
+
+Tahsilat akisi:
+- hizli satis ekranindaki `KREDI KARTI`, `NAKIT`, `PARCALI` butonlari tahsilat ekranini acar
+- aktif fatura yoksa once siparis olusturulur
+- sonra `POST /api/v1/fatura/olustur-siparisten` ile fatura uretilir
+- tahsilat `POST /api/v1/tahsilat` ile gonderilir
+- nakit, kredi karti ve acik hesap odeme tipleri desteklenir
+- parcali tahsilatta odenen ve kalan tutar her odemede guncellenir
+- kalan tutar `0` oldugunda tahsilat tamamlandi kabul edilir
+
+UI sonucu:
+- sol menulu, gridli, barkodlu hizli satis ekrani
+- buyuk numerik tuslar
+- kategori butonlari ve urun kartlari
+- siyah ust barli, buyuk numerik tahsilat ekrani
+- ikonsuz, yazi agirlikli, dokunmatik odakli parcali tahsilat tasarimi
+
+Gecici notlar:
+- urun fiyati backend DTO'da olmadigi icin desktop tarafinda fallback ile calisiyor
+- urunsuz durumda tahsilat ekrani onizleme icin gecici olarak acilabiliyor
+- `1/n`, `Odeme iptal`, `Tahsilat indirim` ve `Fatura` butonlari placeholder
+
+Durum:
+- `dotnet build src/PanoPos.Desktop/PanoPos.Desktop.csproj` gecti
+- desktop hizli satis ve tahsilat ekranlari acilabilir durumda

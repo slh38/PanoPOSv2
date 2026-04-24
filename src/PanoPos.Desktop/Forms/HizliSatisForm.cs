@@ -12,6 +12,7 @@ namespace PanoPos.Desktop.Forms;
 public sealed class HizliSatisForm : XtraForm
 {
     private readonly IHizliSatisService _hizliSatisService;
+    private readonly ITahsilatService _tahsilatService;
     private readonly AppSession _session;
     private readonly ToolTip _toolTip = new();
     private readonly BindingList<SepetSatirModel> _sepetSatirlari = [];
@@ -23,11 +24,16 @@ public sealed class HizliSatisForm : XtraForm
     private readonly LabelControl _lblToplam;
     private readonly GridView _gridView;
     private readonly FlowLayoutPanel _kategoriPanel;
+    private readonly SimpleButton _btnKrediKarti;
+    private readonly SimpleButton _btnParcali;
+    private readonly SimpleButton _btnNakit;
+    private FaturaResponseModel? _aktifFatura;
     private string? _aktifKategori;
 
-    public HizliSatisForm(IHizliSatisService hizliSatisService, AppSession session)
+    public HizliSatisForm(IHizliSatisService hizliSatisService, ITahsilatService tahsilatService, AppSession session)
     {
         _hizliSatisService = hizliSatisService;
+        _tahsilatService = tahsilatService;
         _session = session;
 
         Text = "Hizli Satis";
@@ -49,7 +55,7 @@ public sealed class HizliSatisForm : XtraForm
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         root.Controls.Add(BuildMenuPanel(), 0, 0);
-        root.Controls.Add(BuildCartPanel(out _gridView, out _txtBarkod, out _lblAraToplam, out _lblIndirim, out _lblToplam), 1, 0);
+        root.Controls.Add(BuildCartPanel(out _gridView, out _txtBarkod, out _lblAraToplam, out _lblIndirim, out _lblToplam, out _btnKrediKarti, out _btnParcali, out _btnNakit), 1, 0);
         root.Controls.Add(BuildKeypadPanel(), 2, 0);
         root.Controls.Add(BuildProductsPanel(out _kategoriPanel, out _urunKartPanel), 3, 0);
 
@@ -172,7 +178,7 @@ public sealed class HizliSatisForm : XtraForm
         return button;
     }
 
-    private Control BuildCartPanel(out GridView gridView, out TextEdit txtBarkod, out LabelControl lblAraToplam, out LabelControl lblIndirim, out LabelControl lblToplam)
+    private Control BuildCartPanel(out GridView gridView, out TextEdit txtBarkod, out LabelControl lblAraToplam, out LabelControl lblIndirim, out LabelControl lblToplam, out SimpleButton btnKrediKarti, out SimpleButton btnParcali, out SimpleButton btnNakit)
     {
         var panel = new Panel
         {
@@ -340,9 +346,12 @@ public sealed class HizliSatisForm : XtraForm
         paymentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
         paymentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
         paymentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-        paymentLayout.Controls.Add(CreatePaymentButton("KREDI KARTI"), 0, 0);
-        paymentLayout.Controls.Add(CreatePaymentButton("PARCALI"), 1, 0);
-        paymentLayout.Controls.Add(CreatePaymentButton("NAKIT"), 2, 0);
+        btnKrediKarti = CreatePaymentButton("KREDI KARTI", BtnKrediKarti_Click);
+        btnParcali = CreatePaymentButton("PARCALI", BtnParcali_Click);
+        btnNakit = CreatePaymentButton("NAKIT", BtnNakit_Click);
+        paymentLayout.Controls.Add(btnKrediKarti, 0, 0);
+        paymentLayout.Controls.Add(btnParcali, 1, 0);
+        paymentLayout.Controls.Add(btnNakit, 2, 0);
         totalLayout.Controls.Add(paymentLayout, 0, 3);
         totalLayout.SetColumnSpan(paymentLayout, 2);
 
@@ -407,7 +416,7 @@ public sealed class HizliSatisForm : XtraForm
         return label;
     }
 
-    private SimpleButton CreatePaymentButton(string text)
+    private SimpleButton CreatePaymentButton(string text, EventHandler click)
     {
         var button = new SimpleButton
         {
@@ -421,7 +430,7 @@ public sealed class HizliSatisForm : XtraForm
         button.Appearance.Options.UseBackColor = true;
         button.Appearance.Options.UseForeColor = true;
         button.ButtonStyle = DevExpress.XtraEditors.Controls.BorderStyles.NoBorder;
-        button.Click += PlaceholderClick;
+        button.Click += click;
         return button;
     }
 
@@ -708,6 +717,12 @@ public sealed class HizliSatisForm : XtraForm
 
     private void AddOrUpdateSepetSatiri(SepetSatirModel yeniSatir)
     {
+        if (_aktifFatura is not null)
+        {
+            XtraMessageBox.Show("Acik tahsilat bulunan satisa yeni urun eklenemez.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         var mevcut = _sepetSatirlari.FirstOrDefault(x =>
             x.UrunId == yeniSatir.UrunId &&
             x.UrunVaryantId == yeniSatir.UrunVaryantId);
@@ -743,6 +758,12 @@ public sealed class HizliSatisForm : XtraForm
 
     private void GridView_CellValueChanged(object sender, DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs e)
     {
+        if (_aktifFatura is not null)
+        {
+            _gridView.RefreshData();
+            return;
+        }
+
         if (e.RowHandle < 0)
         {
             return;
@@ -766,6 +787,11 @@ public sealed class HizliSatisForm : XtraForm
 
     private void GridView_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (_aktifFatura is not null)
+        {
+            return;
+        }
+
         if (e.KeyCode != Keys.Delete)
         {
             return;
@@ -783,6 +809,12 @@ public sealed class HizliSatisForm : XtraForm
 
     private async void BtnBeklet_Click(object? sender, EventArgs e)
     {
+        if (_aktifFatura is not null)
+        {
+            XtraMessageBox.Show("Acik tahsilat bulunan satis beklemeye alinamaz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         try
         {
             ToggleBusy(true);
@@ -817,6 +849,88 @@ public sealed class HizliSatisForm : XtraForm
     {
         UseWaitCursor = isBusy;
         Enabled = !isBusy;
+    }
+
+    private async void BtnKrediKarti_Click(object? sender, EventArgs e)
+    {
+        await OpenTahsilatFormAsync(OdemeTipiModel.KrediKarti);
+    }
+
+    private async void BtnParcali_Click(object? sender, EventArgs e)
+    {
+        await OpenTahsilatFormAsync(null);
+    }
+
+    private async void BtnNakit_Click(object? sender, EventArgs e)
+    {
+        await OpenTahsilatFormAsync(OdemeTipiModel.Nakit);
+    }
+
+    private async Task OpenTahsilatFormAsync(OdemeTipiModel? varsayilanOdemeTipi)
+    {
+        if (_aktifFatura is null && _sepetSatirlari.Count == 0)
+        {
+            using var previewForm = new TahsilatForm(
+                _tahsilatService,
+                _session,
+                new FaturaResponseModel
+                {
+                    Id = 0,
+                    AraToplam = 0m,
+                    GenelIndirimTutari = 0m,
+                    NetToplam = 0m,
+                    OdenenTutar = 0m,
+                    KalanTutar = 0m,
+                    ParaBirimKodu = "TRY",
+                    Kur = 1
+                },
+                varsayilanOdemeTipi);
+            previewForm.ShowDialog(this);
+            return;
+        }
+
+        try
+        {
+            ToggleBusy(true);
+
+            if (_aktifFatura is null)
+            {
+                _aktifFatura = await _hizliSatisService.FaturaOlusturAsync(_sepetSatirlari);
+                SetSalesEditingState(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show(ex.Message, "Tahsilat Hazirlanamadi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+        finally
+        {
+            ToggleBusy(false);
+        }
+
+        using var form = new TahsilatForm(_tahsilatService, _session, _aktifFatura, varsayilanOdemeTipi);
+        form.ShowDialog(this);
+        _aktifFatura = form.CurrentFatura;
+
+        if (!form.IsCompleted)
+        {
+            return;
+        }
+
+        _aktifFatura = null;
+        _sepetSatirlari.Clear();
+        SetSalesEditingState(true);
+        UpdateTotals();
+        _txtBarkod.Focus();
+    }
+
+    private void SetSalesEditingState(bool enabled)
+    {
+        _txtBarkod.Enabled = enabled;
+        _kategoriPanel.Enabled = enabled;
+        _urunKartPanel.Enabled = enabled;
+        _gridView.OptionsBehavior.Editable = enabled;
     }
 
     private void PlaceholderClick(object? sender, EventArgs e)

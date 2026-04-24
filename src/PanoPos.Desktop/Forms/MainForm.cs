@@ -8,13 +8,15 @@ public sealed class MainForm : XtraForm
 {
     private readonly IAuthService _authService;
     private readonly IHizliSatisService _hizliSatisService;
+    private readonly ITahsilatService _tahsilatService;
     private readonly AppSession _session;
     private readonly List<SimpleButton> menuButtons = [];
 
-    public MainForm(IAuthService authService, IHizliSatisService hizliSatisService, AppSession session)
+    public MainForm(IAuthService authService, IHizliSatisService hizliSatisService, ITahsilatService tahsilatService, AppSession session)
     {
         _authService = authService;
         _hizliSatisService = hizliSatisService;
+        _tahsilatService = tahsilatService;
         _session = session;
 
         Text = "Pano POS";
@@ -177,7 +179,7 @@ public sealed class MainForm : XtraForm
 
         if (string.Equals(button.Text, "Hizli Satis", StringComparison.OrdinalIgnoreCase))
         {
-            using var form = new HizliSatisForm(_hizliSatisService, _session);
+            using var form = new HizliSatisForm(_hizliSatisService, _tahsilatService, _session);
             form.ShowDialog(this);
             return;
         }

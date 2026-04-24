@@ -65,17 +65,7 @@ public sealed class HizliSatisService : IHizliSatisService
             throw new InvalidOperationException("Bekletmek icin sepette urun olmalidir.");
         }
 
-        var siparis = await _apiClient.PostAsync<SiparisOlusturRequestModel, SiparisResponseModel>(
-            "/api/v1/siparis",
-            new SiparisOlusturRequestModel
-            {
-                SubeId = _session.VarsayilanSubeId,
-                SiparisTipi = HizliSatisBekleyen,
-                ParaBirimKodu = "TRY",
-                Kur = 1,
-                GenelIndirimTutari = 0m
-            },
-            cancellationToken);
+        var siparis = await CreateSiparisAsync(satirList, cancellationToken);
 
         if (siparis is null || siparis.Id <= 0)
         {
@@ -98,5 +88,65 @@ public sealed class HizliSatisService : IHizliSatisService
         }
 
         return siparis.Id;
+    }
+
+    public async Task<FaturaResponseModel> FaturaOlusturAsync(IEnumerable<SepetSatirModel> satirlar, CancellationToken cancellationToken = default)
+    {
+        var satirList = satirlar.ToList();
+        if (satirList.Count == 0)
+        {
+            throw new InvalidOperationException("Tahsilat icin sepette urun olmalidir.");
+        }
+
+        var siparis = await CreateSiparisAsync(satirList, cancellationToken);
+        if (siparis is null || siparis.Id <= 0)
+        {
+            throw new InvalidOperationException("Siparis olusturulamadi.");
+        }
+
+        foreach (var satir in satirList)
+        {
+            await _apiClient.PostAsync<SiparisSatirEkleRequestModel, SiparisResponseModel>(
+                $"/api/v1/siparis/{siparis.Id}/satir",
+                new SiparisSatirEkleRequestModel
+                {
+                    UrunId = satir.UrunId,
+                    UrunVaryantId = satir.UrunVaryantId,
+                    Miktar = satir.Miktar,
+                    BirimFiyat = satir.BirimFiyat,
+                    IndirimTutari = satir.IndirimTutari
+                },
+                cancellationToken);
+        }
+
+        var fatura = await _apiClient.PostAsync<SiparistenFaturaOlusturRequestModel, FaturaResponseModel>(
+            "/api/v1/fatura/olustur-siparisten",
+            new SiparistenFaturaOlusturRequestModel
+            {
+                SiparisId = siparis.Id
+            },
+            cancellationToken);
+
+        if (fatura is null || fatura.Id <= 0)
+        {
+            throw new InvalidOperationException("Fatura olusturulamadi.");
+        }
+
+        return fatura;
+    }
+
+    private Task<SiparisResponseModel?> CreateSiparisAsync(IEnumerable<SepetSatirModel> satirlar, CancellationToken cancellationToken)
+    {
+        return _apiClient.PostAsync<SiparisOlusturRequestModel, SiparisResponseModel>(
+            "/api/v1/siparis",
+            new SiparisOlusturRequestModel
+            {
+                SubeId = _session.VarsayilanSubeId,
+                SiparisTipi = HizliSatisBekleyen,
+                ParaBirimKodu = "TRY",
+                Kur = 1,
+                GenelIndirimTutari = satirlar.Sum(x => x.IndirimTutari)
+            },
+            cancellationToken);
     }
 }

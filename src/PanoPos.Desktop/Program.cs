@@ -15,7 +15,8 @@ internal static class Program
         var apiClient = new ApiClient(settings);
         var authService = new AuthService(apiClient, settings, AppSession.Current);
         var hizliSatisService = new HizliSatisService(apiClient, AppSession.Current);
+        var tahsilatService = new TahsilatService(apiClient);
 
-        Application.Run(new DesktopApplicationContext(authService, hizliSatisService));
+        Application.Run(new DesktopApplicationContext(authService, hizliSatisService, tahsilatService));
     }
 }

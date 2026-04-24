@@ -1,0 +1,17 @@
+namespace PanoPos.Desktop.Models;
+
+public sealed class FaturaResponseModel
+{
+    public long Id { get; set; }
+    public string FaturaNo { get; set; } = string.Empty;
+    public long? SiparisId { get; set; }
+    public string ParaBirimKodu { get; set; } = string.Empty;
+    public decimal Kur { get; set; }
+    public decimal AraToplam { get; set; }
+    public decimal GenelIndirimTutari { get; set; }
+    public decimal NetToplam { get; set; }
+    public decimal OdenenTutar { get; set; }
+    public decimal KalanTutar { get; set; }
+    public decimal ToplamTutar { get; set; }
+    public short Durum { get; set; }
+}

@@ -7,11 +7,13 @@ public sealed class DesktopApplicationContext : ApplicationContext
 {
     private readonly IAuthService _authService;
     private readonly IHizliSatisService _hizliSatisService;
+    private readonly ITahsilatService _tahsilatService;
 
-    public DesktopApplicationContext(IAuthService authService, IHizliSatisService hizliSatisService)
+    public DesktopApplicationContext(IAuthService authService, IHizliSatisService hizliSatisService, ITahsilatService tahsilatService)
     {
         _authService = authService;
         _hizliSatisService = hizliSatisService;
+        _tahsilatService = tahsilatService;
         ShowLoginForm();
     }
 
@@ -34,7 +36,7 @@ public sealed class DesktopApplicationContext : ApplicationContext
         loginForm.LoginSucceeded -= HandleLoginSucceeded;
         loginForm.FormClosed -= HandleLoginFormClosed;
 
-        var mainForm = new MainForm(_authService, _hizliSatisService, AppSession.Current);
+        var mainForm = new MainForm(_authService, _hizliSatisService, _tahsilatService, AppSession.Current);
         mainForm.LogoutCompleted += HandleLogoutCompleted;
         mainForm.FormClosed += HandleMainFormClosed;
         MainForm = mainForm;
