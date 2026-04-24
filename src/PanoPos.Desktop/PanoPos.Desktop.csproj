@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DevExpressRoot>C:\Program Files\DevExpress 22.2\Components\Bin\NetCore</DevExpressRoot>
+    <DevExpressStandardRoot>C:\Program Files\DevExpress 22.2\Components\Bin\Standard</DevExpressStandardRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="DevExpress.Drawing.v22.2">
+      <HintPath>$(DevExpressStandardRoot)\DevExpress.Drawing.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.Data.v22.2">
+      <HintPath>$(DevExpressStandardRoot)\DevExpress.Data.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.Data.Desktop.v22.2">
+      <HintPath>$(DevExpressRoot)\DevExpress.Data.Desktop.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v22.2">
+      <HintPath>$(DevExpressRoot)\DevExpress.Utils.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v22.2.UI">
+      <HintPath>$(DevExpressRoot)\DevExpress.Utils.v22.2.UI.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v22.2">
+      <HintPath>$(DevExpressRoot)\DevExpress.XtraEditors.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="App.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
