@@ -31,8 +31,16 @@
       <HintPath>$(DevExpressRoot)\DevExpress.Utils.v22.2.UI.dll</HintPath>
       <Private>true</Private>
     </Reference>
+    <Reference Include="DevExpress.Printing.v22.2.Core">
+      <HintPath>$(DevExpressStandardRoot)\DevExpress.Printing.v22.2.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <Reference Include="DevExpress.XtraEditors.v22.2">
       <HintPath>$(DevExpressRoot)\DevExpress.XtraEditors.v22.2.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="DevExpress.XtraGrid.v22.2">
+      <HintPath>$(DevExpressRoot)\DevExpress.XtraGrid.v22.2.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>

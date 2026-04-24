@@ -7,12 +7,14 @@ namespace PanoPos.Desktop.Forms;
 public sealed class MainForm : XtraForm
 {
     private readonly IAuthService _authService;
+    private readonly IHizliSatisService _hizliSatisService;
     private readonly AppSession _session;
     private readonly List<SimpleButton> menuButtons = [];
 
-    public MainForm(IAuthService authService, AppSession session)
+    public MainForm(IAuthService authService, IHizliSatisService hizliSatisService, AppSession session)
     {
         _authService = authService;
+        _hizliSatisService = hizliSatisService;
         _session = session;
 
         Text = "Pano POS";
@@ -160,10 +162,27 @@ public sealed class MainForm : XtraForm
         button.AppearancePressed.Options.UseBorderColor = true;
 
         button.ButtonStyle = DevExpress.XtraEditors.Controls.BorderStyles.Simple;
-        button.Click += HandlePlaceholderClick;
+        button.Click += MenuTile_Click;
 
         menuButtons.Add(button);
         return button;
+    }
+
+    private void MenuTile_Click(object? sender, EventArgs e)
+    {
+        if (sender is not SimpleButton button)
+        {
+            return;
+        }
+
+        if (string.Equals(button.Text, "Hizli Satis", StringComparison.OrdinalIgnoreCase))
+        {
+            using var form = new HizliSatisForm(_hizliSatisService, _session);
+            form.ShowDialog(this);
+            return;
+        }
+
+        HandlePlaceholderClick(sender, e);
     }
 
     private void HandlePlaceholderClick(object? sender, EventArgs e)

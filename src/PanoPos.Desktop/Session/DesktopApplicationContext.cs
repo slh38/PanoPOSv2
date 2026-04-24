@@ -6,10 +6,12 @@ namespace PanoPos.Desktop.Session;
 public sealed class DesktopApplicationContext : ApplicationContext
 {
     private readonly IAuthService _authService;
+    private readonly IHizliSatisService _hizliSatisService;
 
-    public DesktopApplicationContext(IAuthService authService)
+    public DesktopApplicationContext(IAuthService authService, IHizliSatisService hizliSatisService)
     {
         _authService = authService;
+        _hizliSatisService = hizliSatisService;
         ShowLoginForm();
     }
 
@@ -32,7 +34,7 @@ public sealed class DesktopApplicationContext : ApplicationContext
         loginForm.LoginSucceeded -= HandleLoginSucceeded;
         loginForm.FormClosed -= HandleLoginFormClosed;
 
-        var mainForm = new MainForm(_authService, AppSession.Current);
+        var mainForm = new MainForm(_authService, _hizliSatisService, AppSession.Current);
         mainForm.LogoutCompleted += HandleLogoutCompleted;
         mainForm.FormClosed += HandleMainFormClosed;
         MainForm = mainForm;
