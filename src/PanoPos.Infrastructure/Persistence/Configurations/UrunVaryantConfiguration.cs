@@ -4,31 +4,31 @@ using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Configurations;
 
-public sealed class UrunVaryantConfiguration : IEntityTypeConfiguration<UrunVaryant>
+public sealed class StokKartVaryantConfiguration : IEntityTypeConfiguration<StokKartVaryant>
 {
-    public void Configure(EntityTypeBuilder<UrunVaryant> builder)
+    public void Configure(EntityTypeBuilder<StokKartVaryant> builder)
     {
-        builder.ToTable("UrunVaryant");
+        builder.ToTable("StokKartVaryant");
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
         builder.Property(x => x.VaryantKodu).HasMaxLength(80).IsRequired();
         builder.Property(x => x.BarkodluMu).IsRequired();
 
-        builder.HasIndex(x => new { x.TenantId, x.UrunId, x.RenkId, x.BedenId }).IsUnique();
-        builder.ToTable(x => x.HasCheckConstraint("CK_UrunVaryant_RenkVeyaBeden", "[RenkId] IS NOT NULL OR [BedenId] IS NOT NULL"));
+        builder.HasIndex(x => new { x.TenantId, x.StokKartId, x.RenkId, x.BedenId }).IsUnique();
+        builder.ToTable(x => x.HasCheckConstraint("CK_StokKartVaryant_RenkVeyaBeden", "[RenkId] IS NOT NULL OR [BedenId] IS NOT NULL"));
 
-        builder.HasOne(x => x.Urun)
+        builder.HasOne(x => x.StokKart)
             .WithMany(x => x.Varyantlar)
-            .HasForeignKey(x => x.UrunId)
+            .HasForeignKey(x => x.StokKartId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Renk)
-            .WithMany(x => x.UrunVaryantlari)
+            .WithMany(x => x.StokKartVaryantlari)
             .HasForeignKey(x => x.RenkId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Beden)
-            .WithMany(x => x.UrunVaryantlari)
+            .WithMany(x => x.StokKartVaryantlari)
             .HasForeignKey(x => x.BedenId)
             .OnDelete(DeleteBehavior.Restrict);
     }

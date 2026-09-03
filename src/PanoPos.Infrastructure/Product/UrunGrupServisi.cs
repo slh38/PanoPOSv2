@@ -6,16 +6,16 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Product;
 
-public sealed class UrunGrupServisi : IUrunGrupServisi
+public sealed class StokGrupServisi : IStokGrupServisi
 {
     private readonly PanoPosDbContext _dbContext;
 
-    public UrunGrupServisi(PanoPosDbContext dbContext)
+    public StokGrupServisi(PanoPosDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<UrunGrupDto> OlusturAsync(UrunGrupOlusturRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<StokGrupDto> OlusturAsync(StokGrupOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Ad))
         {
@@ -26,12 +26,12 @@ public sealed class UrunGrupServisi : IUrunGrupServisi
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = NormalizeOptional(request.Kod);
-        if (kod is not null && await _dbContext.UrunGruplari.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
+        if (kod is not null && await _dbContext.StokGruplari.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
         {
             throw new UygulamaHatasi(409, "Grup hatasi", "Ayni tenant icinde grup kodu tekrar edemez.", "urun_grup_duplicate");
         }
 
-        var grup = new UrunGrup
+        var grup = new StokGrup
         {
             TenantId = sube.TenantId,
             SubeId = sube.Id,
@@ -41,10 +41,10 @@ public sealed class UrunGrupServisi : IUrunGrupServisi
             SilindiMi = false
         };
 
-        _dbContext.UrunGruplari.Add(grup);
+        _dbContext.StokGruplari.Add(grup);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new UrunGrupDto
+        return new StokGrupDto
         {
             Id = grup.Id,
             Ad = grup.Ad,
@@ -52,11 +52,11 @@ public sealed class UrunGrupServisi : IUrunGrupServisi
         };
     }
 
-    public async Task<List<UrunGrupDto>> ListeleAsync(CancellationToken cancellationToken = default)
+    public async Task<List<StokGrupDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.UrunGruplari
+        return await _dbContext.StokGruplari
             .OrderBy(x => x.Ad)
-            .Select(x => new UrunGrupDto
+            .Select(x => new StokGrupDto
             {
                 Id = x.Id,
                 Ad = x.Ad,

@@ -1,6 +1,6 @@
 namespace PanoPos.Application.Product;
 
-public sealed class UrunGrupDto
+public sealed class StokGrupDto
 {
     public long Id { get; set; }
     public string Ad { get; set; } = string.Empty;

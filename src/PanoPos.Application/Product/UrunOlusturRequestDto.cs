@@ -3,16 +3,16 @@ using PanoPos.Domain.Enums;
 
 namespace PanoPos.Application.Product;
 
-public class UrunOlusturRequestDto
+public class StokKartOlusturRequestDto
 {
     [Range(1, long.MaxValue)]
     public long SubeId { get; set; }
-    public string? UrunKodu { get; set; }
+    public string? StokKartKodu { get; set; }
     [Required]
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
-    public UrunTipi UrunTipi { get; set; }
-    public long? UrunKategoriId { get; set; }
-    public long? UrunGrupId { get; set; }
+    public StokKartTipi StokKartTipi { get; set; }
+    public long? StokKategoriId { get; set; }
+    public long? StokGrupId { get; set; }
 }
 

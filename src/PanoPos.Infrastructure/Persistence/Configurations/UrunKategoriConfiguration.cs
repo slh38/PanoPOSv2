@@ -4,11 +4,11 @@ using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Configurations;
 
-public sealed class UrunKategoriConfiguration : IEntityTypeConfiguration<UrunKategori>
+public sealed class StokKategoriConfiguration : IEntityTypeConfiguration<StokKategori>
 {
-    public void Configure(EntityTypeBuilder<UrunKategori> builder)
+    public void Configure(EntityTypeBuilder<StokKategori> builder)
     {
-        builder.ToTable("UrunKategori");
+        builder.ToTable("StokKategori");
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
         builder.Property(x => x.Ad).HasMaxLength(150).IsRequired();

@@ -1,6 +1,6 @@
 namespace PanoPos.Domain.Enums;
 
-public enum UrunTipi
+public enum StokKartTipi
 {
     Mamul = 1,
     YariMamul = 2,

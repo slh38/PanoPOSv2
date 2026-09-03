@@ -31,10 +31,10 @@ public sealed class BarkodServisi : IBarkodServisi
             await connection.OpenAsync(cancellationToken);
         }
 
-        var sql = @"SELECT b.Id, b.BarkodNo, b.BarkodTipi, b.UrunId, b.UrunVaryantId, u.Ad AS UrunAd, uv.VaryantKodu
+        var sql = @"SELECT b.Id, b.BarkodNo, b.BarkodTipi, b.StokKartId, b.StokKartVaryantId, u.Ad AS StokKartAd, uv.VaryantKodu
                     FROM Barkod b
-                    LEFT JOIN Urun u ON u.Id = b.UrunId AND u.SilindiMi = 0
-                    LEFT JOIN UrunVaryant uv ON uv.Id = b.UrunVaryantId AND uv.SilindiMi = 0
+                    LEFT JOIN StokKart u ON u.Id = b.StokKartId AND u.SilindiMi = 0
+                    LEFT JOIN StokKartVaryant uv ON uv.Id = b.StokKartVaryantId AND uv.SilindiMi = 0
                     WHERE b.SilindiMi = 0 AND b.BarkodNo = @BarkodNo;";
 
         return await connection.QuerySingleOrDefaultAsync<BarkodDto>(new CommandDefinition(sql, new { BarkodNo = barkodNo.Trim() }, cancellationToken: cancellationToken));
@@ -49,23 +49,23 @@ public sealed class BarkodServisi : IBarkodServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "BarkodNo bos olamaz.", "barcode_required");
         }
 
-        if ((request.UrunId.HasValue && request.UrunVaryantId.HasValue) || (!request.UrunId.HasValue && !request.UrunVaryantId.HasValue))
+        if ((request.StokKartId.HasValue && request.StokKartVaryantId.HasValue) || (!request.StokKartId.HasValue && !request.StokKartVaryantId.HasValue))
         {
             throw new UygulamaHatasi(400, "Gecersiz barkod", "Barkod mutlaka urun veya varyanta bagli olsun.", "barcode_target_invalid");
         }
 
         Guid tenantId;
         long subeId;
-        if (request.UrunId.HasValue)
+        if (request.StokKartId.HasValue)
         {
-            var urun = await _dbContext.Urunler.SingleOrDefaultAsync(x => x.Id == request.UrunId.Value, cancellationToken)
-                ?? throw new UygulamaHatasi(404, "Urun bulunamadi", "Urun bulunamadi.", "urun_not_found");
+            var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId.Value, cancellationToken)
+                ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
             tenantId = urun.TenantId;
             subeId = urun.SubeId;
         }
         else
         {
-            var varyant = await _dbContext.UrunVaryantlari.SingleOrDefaultAsync(x => x.Id == request.UrunVaryantId!.Value, cancellationToken)
+            var varyant = await _dbContext.StokKartVaryantlari.SingleOrDefaultAsync(x => x.Id == request.StokKartVaryantId!.Value, cancellationToken)
                 ?? throw new UygulamaHatasi(404, "Varyant bulunamadi", "Varyant bulunamadi.", "variant_not_found");
             tenantId = varyant.TenantId;
             subeId = varyant.SubeId;
@@ -94,8 +94,8 @@ public sealed class BarkodServisi : IBarkodServisi
         barkod.SubeId = subeId;
         barkod.BarkodNo = barkodNo;
         barkod.BarkodTipi = request.BarkodTipi;
-        barkod.UrunId = request.UrunId;
-        barkod.UrunVaryantId = request.UrunVaryantId;
+        barkod.StokKartId = request.StokKartId;
+        barkod.StokKartVaryantId = request.StokKartVaryantId;
         barkod.AktifMi = true;
         barkod.SilindiMi = false;
 

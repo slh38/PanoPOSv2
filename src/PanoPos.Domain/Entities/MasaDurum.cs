@@ -1,4 +1,4 @@
-﻿namespace PanoPos.Domain.Entities;
+namespace PanoPos.Domain.Entities;
 
 public sealed class MasaDurum
 {

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PanoPos.Application.Product;
 
-public sealed class UrunVaryantOlusturRequestDto
+public sealed class StokKartVaryantOlusturRequestDto
 {
     public long? RenkId { get; set; }
     public long? BedenId { get; set; }

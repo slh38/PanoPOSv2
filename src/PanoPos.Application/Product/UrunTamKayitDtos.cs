@@ -1,6 +1,6 @@
 namespace PanoPos.Application.Product;
 
-public sealed class UrunFiyatDto
+public sealed class StokKartFiyatDto
 {
     public long Id { get; set; }
     public long FiyatTipiId { get; set; }
@@ -8,17 +8,17 @@ public sealed class UrunFiyatDto
     public string ParaBirimKodu { get; set; } = string.Empty;
 }
 
-public sealed class UrunSatisBirimiKayitDto
+public sealed class StokKartSatisBirimiKayitDto
 {
     public string BirimKodu { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
     public decimal Katsayi { get; set; }
     public bool VarsayilanMi { get; set; }
     public string? BarkodNo { get; set; }
-    public List<UrunFiyatDto> Fiyatlar { get; set; } = new();
+    public List<StokKartFiyatDto> Fiyatlar { get; set; } = new();
 }
 
-public sealed class UrunTamKayitRequestDto : UrunOlusturRequestDto
+public sealed class StokKartTamKayitRequestDto : StokKartOlusturRequestDto
 {
-    public List<UrunSatisBirimiKayitDto> SatisBirimleri { get; set; } = new();
+    public List<StokKartSatisBirimiKayitDto> SatisBirimleri { get; set; } = new();
 }

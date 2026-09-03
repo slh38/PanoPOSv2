@@ -3,18 +3,18 @@ using PanoPos.Domain.Enums;
 
 namespace PanoPos.Domain.Entities;
 
-public sealed class Urun : BaseEntity
+public sealed class StokKart : BaseEntity
 {
-    public string? UrunKodu { get; set; }
+    public string? StokKartKodu { get; set; }
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
-    public UrunTipi UrunTipi { get; set; }
-    public long? UrunKategoriId { get; set; }
-    public long? UrunGrupId { get; set; }
+    public StokKartTipi StokKartTipi { get; set; }
+    public long? StokKategoriId { get; set; }
+    public long? StokGrupId { get; set; }
 
-    public UrunKategori? UrunKategori { get; set; }
-    public UrunGrup? UrunGrup { get; set; }
-    public ICollection<UrunVaryant> Varyantlar { get; set; } = new List<UrunVaryant>();
+    public StokKategori? StokKategori { get; set; }
+    public StokGrup? StokGrup { get; set; }
+    public ICollection<StokKartVaryant> Varyantlar { get; set; } = new List<StokKartVaryant>();
     public ICollection<Barkod> Barkodlar { get; set; } = new List<Barkod>();
-    public ICollection<UrunSatisBirimi> SatisBirimleri { get; set; } = new List<UrunSatisBirimi>();
+    public ICollection<StokKartSatisBirimi> SatisBirimleri { get; set; } = new List<StokKartSatisBirimi>();
 }

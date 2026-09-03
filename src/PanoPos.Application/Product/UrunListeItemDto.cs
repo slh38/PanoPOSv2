@@ -2,15 +2,15 @@ using PanoPos.Domain.Enums;
 
 namespace PanoPos.Application.Product;
 
-public sealed class UrunListeItemDto
+public sealed class StokKartListeItemDto
 {
     public long Id { get; set; }
-    public string? UrunKodu { get; set; }
+    public string? StokKartKodu { get; set; }
     public string Ad { get; set; } = string.Empty;
-    public UrunTipi UrunTipi { get; set; }
-    public long? UrunKategoriId { get; set; }
-    public string? UrunKategoriAd { get; set; }
-    public long? UrunGrupId { get; set; }
-    public string? UrunGrupAd { get; set; }
+    public StokKartTipi StokKartTipi { get; set; }
+    public long? StokKategoriId { get; set; }
+    public string? StokKategoriAd { get; set; }
+    public long? StokGrupId { get; set; }
+    public string? StokGrupAd { get; set; }
     public bool AktifMi { get; set; }
 }

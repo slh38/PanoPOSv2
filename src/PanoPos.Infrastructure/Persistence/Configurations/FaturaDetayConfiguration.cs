@@ -29,21 +29,21 @@ public sealed class FaturaDetayConfiguration : IEntityTypeConfiguration<FaturaDe
             .HasForeignKey(x => x.FaturaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.Urun)
+        builder.HasOne(x => x.StokKart)
             .WithMany()
-            .HasForeignKey(x => x.UrunId)
+            .HasForeignKey(x => x.StokKartId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.UrunVaryant)
+        builder.HasOne(x => x.StokKartVaryant)
             .WithMany()
-            .HasForeignKey(x => x.UrunVaryantId)
+            .HasForeignKey(x => x.StokKartVaryantId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.FaturaId);
 
-        builder.HasOne(x => x.UrunSatisBirimi)
+        builder.HasOne(x => x.StokKartSatisBirimi)
             .WithMany()
-            .HasForeignKey(x => x.UrunSatisBirimiId)
+            .HasForeignKey(x => x.StokKartSatisBirimiId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

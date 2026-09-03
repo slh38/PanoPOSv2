@@ -6,16 +6,16 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Product;
 
-public sealed class UrunKategoriServisi : IUrunKategoriServisi
+public sealed class StokKategoriServisi : IStokKategoriServisi
 {
     private readonly PanoPosDbContext _dbContext;
 
-    public UrunKategoriServisi(PanoPosDbContext dbContext)
+    public StokKategoriServisi(PanoPosDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<UrunKategoriDto> OlusturAsync(UrunKategoriOlusturRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<StokKategoriDto> OlusturAsync(StokKategoriOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Ad))
         {
@@ -26,12 +26,12 @@ public sealed class UrunKategoriServisi : IUrunKategoriServisi
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = NormalizeOptional(request.Kod);
-        if (kod is not null && await _dbContext.UrunKategorileri.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
+        if (kod is not null && await _dbContext.StokKategorileri.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
         {
             throw new UygulamaHatasi(409, "Kategori hatasi", "Ayni tenant icinde kategori kodu tekrar edemez.", "urun_kategori_duplicate");
         }
 
-        var kategori = new UrunKategori
+        var kategori = new StokKategori
         {
             TenantId = sube.TenantId,
             SubeId = sube.Id,
@@ -41,10 +41,10 @@ public sealed class UrunKategoriServisi : IUrunKategoriServisi
             SilindiMi = false
         };
 
-        _dbContext.UrunKategorileri.Add(kategori);
+        _dbContext.StokKategorileri.Add(kategori);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new UrunKategoriDto
+        return new StokKategoriDto
         {
             Id = kategori.Id,
             Ad = kategori.Ad,
@@ -52,11 +52,11 @@ public sealed class UrunKategoriServisi : IUrunKategoriServisi
         };
     }
 
-    public async Task<List<UrunKategoriDto>> ListeleAsync(CancellationToken cancellationToken = default)
+    public async Task<List<StokKategoriDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.UrunKategorileri
+        return await _dbContext.StokKategorileri
             .OrderBy(x => x.Ad)
-            .Select(x => new UrunKategoriDto
+            .Select(x => new StokKategoriDto
             {
                 Id = x.Id,
                 Ad = x.Ad,

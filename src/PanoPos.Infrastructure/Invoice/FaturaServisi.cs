@@ -91,8 +91,8 @@ public sealed class FaturaServisi : IFaturaServisi
                 TenantId = detay.TenantId,
                 SubeId = detay.SubeId,
                 FaturaId = fatura.Id,
-                UrunId = detay.UrunId,
-                UrunVaryantId = detay.UrunVaryantId,
+                StokKartId = detay.StokKartId,
+                StokKartVaryantId = detay.StokKartVaryantId,
                 Miktar = detay.Miktar,
                 BirimFiyat = detay.BirimFiyat,
                 SatirAraToplam = detay.SatirAraToplam,
@@ -139,8 +139,8 @@ public sealed class FaturaServisi : IFaturaServisi
     public async Task<FaturaDto> FaturaGetirAsync(long id, CancellationToken cancellationToken = default)
     {
         var fatura = await _dbContext.Faturalar
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.Urun)
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.UrunVaryant)
+            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
+            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
 
@@ -167,10 +167,10 @@ public sealed class FaturaServisi : IFaturaServisi
             Detaylar = fatura.Detaylar.OrderBy(x => x.Id).Select(x => new FaturaDetayDto
             {
                 Id = x.Id,
-                UrunId = x.UrunId,
-                UrunAd = x.Urun.Ad,
-                UrunVaryantId = x.UrunVaryantId,
-                VaryantKodu = x.UrunVaryant != null ? x.UrunVaryant.VaryantKodu : null,
+                StokKartId = x.StokKartId,
+                StokKartAd = x.StokKart.Ad,
+                StokKartVaryantId = x.StokKartVaryantId,
+                VaryantKodu = x.StokKartVaryant != null ? x.StokKartVaryant.VaryantKodu : null,
                 Miktar = x.Miktar,
                 BirimFiyat = x.BirimFiyat,
                 SatirAraToplam = x.SatirAraToplam,

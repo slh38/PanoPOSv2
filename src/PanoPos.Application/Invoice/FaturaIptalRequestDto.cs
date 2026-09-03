@@ -1,4 +1,4 @@
-﻿namespace PanoPos.Application.Invoice;
+namespace PanoPos.Application.Invoice;
 
 public sealed class FaturaIptalRequestDto
 {

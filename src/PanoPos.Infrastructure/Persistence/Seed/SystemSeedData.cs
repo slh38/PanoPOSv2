@@ -1,4 +1,4 @@
-﻿using PanoPos.Domain.Entities;
+using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Seed;
 

@@ -1,4 +1,4 @@
-﻿using PanoPos.Domain.Enums;
+using PanoPos.Domain.Enums;
 
 namespace PanoPos.Application.Order;
 

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PanoPos.Application.Product;
 
-public sealed class UrunKategoriOlusturRequestDto
+public sealed class StokKategoriOlusturRequestDto
 {
     [Range(1, long.MaxValue)]
     public long SubeId { get; set; }

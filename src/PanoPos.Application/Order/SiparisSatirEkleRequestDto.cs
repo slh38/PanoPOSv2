@@ -2,9 +2,9 @@ namespace PanoPos.Application.Order;
 
 public sealed class SiparisSatirEkleRequestDto
 {
-    public long UrunId { get; set; }
-    public long? UrunVaryantId { get; set; }
-    public long? UrunSatisBirimiId { get; set; }
+    public long StokKartId { get; set; }
+    public long? StokKartVaryantId { get; set; }
+    public long? StokKartSatisBirimiId { get; set; }
     public long? FiyatTipiId { get; set; }
     public string? FiyatParaBirimKodu { get; set; }
     public decimal? FiyatKur { get; set; }

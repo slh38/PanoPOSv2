@@ -1,13 +1,13 @@
-﻿using PanoPos.Domain.Common;
+using PanoPos.Domain.Common;
 
 namespace PanoPos.Domain.Entities;
 
 public sealed class SiparisDetay : BaseEntity
 {
     public long SiparisId { get; set; }
-    public long UrunId { get; set; }
-    public long? UrunVaryantId { get; set; }
-    public long? UrunSatisBirimiId { get; set; }
+    public long StokKartId { get; set; }
+    public long? StokKartVaryantId { get; set; }
+    public long? StokKartSatisBirimiId { get; set; }
     public string? BirimAdi { get; set; }
     public decimal? BirimKatsayi { get; set; }
     public decimal Miktar { get; set; }
@@ -22,7 +22,7 @@ public sealed class SiparisDetay : BaseEntity
     public string? Aciklama { get; set; }
 
     public Siparis Siparis { get; set; } = null!;
-    public Urun Urun { get; set; } = null!;
-    public UrunVaryant? UrunVaryant { get; set; }
-    public UrunSatisBirimi? UrunSatisBirimi { get; set; }
+    public StokKart StokKart { get; set; } = null!;
+    public StokKartVaryant? StokKartVaryant { get; set; }
+    public StokKartSatisBirimi? StokKartSatisBirimi { get; set; }
 }

@@ -1,11 +1,11 @@
-﻿namespace PanoPos.Application.Order;
+namespace PanoPos.Application.Order;
 
 public sealed class SiparisDetayDto
 {
     public long Id { get; set; }
-    public long UrunId { get; set; }
-    public string UrunAd { get; set; } = string.Empty;
-    public long? UrunVaryantId { get; set; }
+    public long StokKartId { get; set; }
+    public string StokKartAd { get; set; } = string.Empty;
+    public long? StokKartVaryantId { get; set; }
     public string? VaryantKodu { get; set; }
     public decimal Miktar { get; set; }
     public decimal BirimFiyat { get; set; }

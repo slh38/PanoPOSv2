@@ -1,4 +1,4 @@
-﻿namespace PanoPos.Application.Restaurant;
+namespace PanoPos.Application.Restaurant;
 
 public sealed class AdisyonKapatRequestDto
 {

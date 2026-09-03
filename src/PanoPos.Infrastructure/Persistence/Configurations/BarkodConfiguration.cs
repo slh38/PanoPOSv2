@@ -15,21 +15,21 @@ public sealed class BarkodConfiguration : IEntityTypeConfiguration<Barkod>
         builder.Property(x => x.BarkodTipi).IsRequired();
 
         builder.HasIndex(x => new { x.TenantId, x.BarkodNo }).IsUnique();
-        builder.ToTable(x => x.HasCheckConstraint("CK_Barkod_Hedef", "([UrunId] IS NOT NULL AND [UrunVaryantId] IS NULL) OR ([UrunId] IS NULL AND [UrunVaryantId] IS NOT NULL)"));
+        builder.ToTable(x => x.HasCheckConstraint("CK_Barkod_Hedef", "([StokKartId] IS NOT NULL AND [StokKartVaryantId] IS NULL) OR ([StokKartId] IS NULL AND [StokKartVaryantId] IS NOT NULL)"));
 
-        builder.HasOne(x => x.Urun)
+        builder.HasOne(x => x.StokKart)
             .WithMany(x => x.Barkodlar)
-            .HasForeignKey(x => x.UrunId)
+            .HasForeignKey(x => x.StokKartId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.UrunVaryant)
+        builder.HasOne(x => x.StokKartVaryant)
             .WithMany(x => x.Barkodlar)
-            .HasForeignKey(x => x.UrunVaryantId)
+            .HasForeignKey(x => x.StokKartVaryantId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.UrunSatisBirimi)
+        builder.HasOne(x => x.StokKartSatisBirimi)
             .WithMany(x => x.Barkodlar)
-            .HasForeignKey(x => x.UrunSatisBirimiId)
+            .HasForeignKey(x => x.StokKartSatisBirimiId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

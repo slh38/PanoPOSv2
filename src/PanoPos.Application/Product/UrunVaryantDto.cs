@@ -1,9 +1,9 @@
 namespace PanoPos.Application.Product;
 
-public sealed class UrunVaryantDto
+public sealed class StokKartVaryantDto
 {
     public long Id { get; set; }
-    public long UrunId { get; set; }
+    public long StokKartId { get; set; }
     public long? RenkId { get; set; }
     public string? RenkAd { get; set; }
     public long? BedenId { get; set; }

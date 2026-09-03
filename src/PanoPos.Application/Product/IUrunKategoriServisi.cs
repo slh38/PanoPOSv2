@@ -1,7 +1,7 @@
 namespace PanoPos.Application.Product;
 
-public interface IUrunKategoriServisi
+public interface IStokKategoriServisi
 {
-    Task<UrunKategoriDto> OlusturAsync(UrunKategoriOlusturRequestDto request, CancellationToken cancellationToken = default);
-    Task<List<UrunKategoriDto>> ListeleAsync(CancellationToken cancellationToken = default);
+    Task<StokKategoriDto> OlusturAsync(StokKategoriOlusturRequestDto request, CancellationToken cancellationToken = default);
+    Task<List<StokKategoriDto>> ListeleAsync(CancellationToken cancellationToken = default);
 }

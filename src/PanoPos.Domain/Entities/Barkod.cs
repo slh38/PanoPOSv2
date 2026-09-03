@@ -7,11 +7,11 @@ public sealed class Barkod : BaseEntity
 {
     public string BarkodNo { get; set; } = string.Empty;
     public BarkodTipi BarkodTipi { get; set; }
-    public long? UrunId { get; set; }
-    public long? UrunVaryantId { get; set; }
-    public long? UrunSatisBirimiId { get; set; }
+    public long? StokKartId { get; set; }
+    public long? StokKartVaryantId { get; set; }
+    public long? StokKartSatisBirimiId { get; set; }
 
-    public Urun? Urun { get; set; }
-    public UrunVaryant? UrunVaryant { get; set; }
-    public UrunSatisBirimi? UrunSatisBirimi { get; set; }
+    public StokKart? StokKart { get; set; }
+    public StokKartVaryant? StokKartVaryant { get; set; }
+    public StokKartSatisBirimi? StokKartSatisBirimi { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PanoPos.Application.Common;
 using PanoPos.Application.Invoice;
 

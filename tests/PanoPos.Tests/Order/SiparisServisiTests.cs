@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Order;
@@ -72,12 +72,12 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Satir_eklenince_toplam_guncellenir()
     {
-        var urun = await UrunEkleAsync("Kahve");
+        var urun = await StokKartEkleAsync("Kahve");
         var siparis = await YeniSiparisAsync();
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 75m
         });
@@ -136,12 +136,12 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Satir_indirimi_oranla_hesaplanir()
     {
-        var urun = await UrunEkleAsync("Pasta");
+        var urun = await StokKartEkleAsync("Pasta");
         var siparis = await YeniSiparisAsync();
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 50m,
             IndirimOrani = 10
@@ -155,12 +155,12 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Satir_indirimi_tutarla_hesaplanir()
     {
-        var urun = await UrunEkleAsync("Cheesecake");
+        var urun = await StokKartEkleAsync("Cheesecake");
         var siparis = await YeniSiparisAsync();
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 50m,
             IndirimTutari = 15m
@@ -173,12 +173,12 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Ayni_satirda_oran_ve_tutar_hata_verir()
     {
-        var urun = await UrunEkleAsync("Cookie");
+        var urun = await StokKartEkleAsync("Cookie");
         var siparis = await YeniSiparisAsync();
 
         var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 1,
             BirimFiyat = 40m,
             IndirimOrani = 10m,
@@ -191,7 +191,7 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Siparis_genel_indirim_orani_calisir()
     {
-        var urun = await UrunEkleAsync("Filtre Kahve");
+        var urun = await StokKartEkleAsync("Filtre Kahve");
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto
         {
             SubeId = 1,
@@ -203,7 +203,7 @@ public sealed class SiparisServisiTests : IDisposable
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 50m
         });
@@ -216,7 +216,7 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task Siparis_genel_indirim_tutari_calisir()
     {
-        var urun = await UrunEkleAsync("Mocha");
+        var urun = await StokKartEkleAsync("Mocha");
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto
         {
             SubeId = 1,
@@ -228,7 +228,7 @@ public sealed class SiparisServisiTests : IDisposable
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 50m
         });
@@ -271,8 +271,8 @@ public sealed class SiparisServisiTests : IDisposable
     [Fact]
     public async Task NetToplam_dogru_hesaplanir()
     {
-        var urun1 = await UrunEkleAsync("Espresso");
-        var urun2 = await UrunEkleAsync("Sandvic");
+        var urun1 = await StokKartEkleAsync("Espresso");
+        var urun2 = await StokKartEkleAsync("Sandvic");
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto
         {
             SubeId = 1,
@@ -284,7 +284,7 @@ public sealed class SiparisServisiTests : IDisposable
 
         await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun1.Id,
+            StokKartId = urun1.Id,
             Miktar = 2,
             BirimFiyat = 30m,
             IndirimTutari = 10m
@@ -292,7 +292,7 @@ public sealed class SiparisServisiTests : IDisposable
 
         var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun2.Id,
+            StokKartId = urun2.Id,
             Miktar = 1,
             BirimFiyat = 40m
         });
@@ -314,19 +314,19 @@ public sealed class SiparisServisiTests : IDisposable
         });
     }
 
-    private async Task<Urun> UrunEkleAsync(string ad)
+    private async Task<StokKart> StokKartEkleAsync(string ad)
     {
-        var urun = new Urun
+        var urun = new StokKart
         {
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
             Ad = ad,
-            UrunTipi = UrunTipi.Mamul,
+            StokKartTipi = StokKartTipi.Mamul,
             AktifMi = true,
             SilindiMi = false
         };
 
-        _dbContext.Urunler.Add(urun);
+        _dbContext.StokKartler.Add(urun);
         await _dbContext.SaveChangesAsync();
         return urun;
     }

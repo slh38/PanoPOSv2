@@ -1,4 +1,4 @@
-﻿namespace PanoPos.Application.Order;
+namespace PanoPos.Application.Order;
 
 public sealed class SiparisIptalRequestDto
 {

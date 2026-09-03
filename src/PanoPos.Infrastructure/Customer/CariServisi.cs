@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 using PanoPos.Application.Customer;

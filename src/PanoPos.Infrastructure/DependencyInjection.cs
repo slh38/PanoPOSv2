@@ -54,12 +54,12 @@ public static class DependencyInjection
         services.AddScoped<ISiparisServisi, SiparisServisi>();
         services.AddScoped<ITahsilatServisi, TahsilatServisi>();
         services.AddScoped<IBankaServisi, BankaServisi>();
-        services.AddScoped<IUrunServisi, UrunServisi>();
+        services.AddScoped<IStokKartServisi, StokKartServisi>();
         services.AddScoped<IBarkodServisi, BarkodServisi>();
         services.AddScoped<IRenkServisi, RenkServisi>();
         services.AddScoped<IBedenServisi, BedenServisi>();
-        services.AddScoped<IUrunKategoriServisi, UrunKategoriServisi>();
-        services.AddScoped<IUrunGrupServisi, UrunGrupServisi>();
+        services.AddScoped<IStokKategoriServisi, StokKategoriServisi>();
+        services.AddScoped<IStokGrupServisi, StokGrupServisi>();
 
         return services;
     }

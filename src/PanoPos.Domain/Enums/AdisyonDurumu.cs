@@ -1,4 +1,4 @@
-﻿namespace PanoPos.Domain.Enums;
+namespace PanoPos.Domain.Enums;
 
 public enum AdisyonDurumu : short
 {

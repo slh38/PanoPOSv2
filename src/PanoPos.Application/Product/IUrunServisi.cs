@@ -2,12 +2,12 @@ using PanoPos.Application.Common;
 
 namespace PanoPos.Application.Product;
 
-public interface IUrunServisi
+public interface IStokKartServisi
 {
-    Task<UrunDto> UrunOlusturAsync(UrunOlusturRequestDto request, CancellationToken cancellationToken = default);
-    Task<UrunDto> UrunGuncelleAsync(long id, UrunGuncelleRequestDto request, CancellationToken cancellationToken = default);
-    Task<UrunDto> UrunDetayGetirAsync(long id, CancellationToken cancellationToken = default);
-    Task<SayfaliSonucDto<UrunListeItemDto>> UrunListeleAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default);
-    Task<UrunVaryantDto> UrunVaryantOlusturAsync(long urunId, UrunVaryantOlusturRequestDto request, CancellationToken cancellationToken = default);
-    Task<List<UrunVaryantDto>> UrunVaryantlariGetirAsync(long urunId, CancellationToken cancellationToken = default);
+    Task<StokKartDto> StokKartOlusturAsync(StokKartOlusturRequestDto request, CancellationToken cancellationToken = default);
+    Task<StokKartDto> StokKartGuncelleAsync(long id, StokKartGuncelleRequestDto request, CancellationToken cancellationToken = default);
+    Task<StokKartDto> StokKartDetayGetirAsync(long id, CancellationToken cancellationToken = default);
+    Task<SayfaliSonucDto<StokKartListeItemDto>> StokKartListeleAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<StokKartVaryantDto> StokKartVaryantOlusturAsync(long urunId, StokKartVaryantOlusturRequestDto request, CancellationToken cancellationToken = default);
+    Task<List<StokKartVaryantDto>> StokKartVaryantlariGetirAsync(long urunId, CancellationToken cancellationToken = default);
 }

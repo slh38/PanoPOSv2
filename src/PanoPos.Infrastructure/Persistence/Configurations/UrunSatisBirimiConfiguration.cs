@@ -4,17 +4,17 @@ using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Configurations;
 
-public sealed class UrunSatisBirimiConfiguration : IEntityTypeConfiguration<UrunSatisBirimi>
+public sealed class StokKartSatisBirimiConfiguration : IEntityTypeConfiguration<StokKartSatisBirimi>
 {
-    public void Configure(EntityTypeBuilder<UrunSatisBirimi> builder)
+    public void Configure(EntityTypeBuilder<StokKartSatisBirimi> builder)
     {
-        builder.ToTable("UrunSatisBirimi");
+        builder.ToTable("StokKartSatisBirimi");
         PanoPosDbContext.ConfigureBaseEntity(builder);
         builder.Property(x => x.BirimKodu).HasMaxLength(50).IsRequired();
         builder.Property(x => x.BirimAdi).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Katsayi).HasColumnType("decimal(18,3)").IsRequired();
-        builder.HasIndex(x => new { x.UrunId, x.BirimKodu }).IsUnique();
-        builder.HasOne(x => x.Urun).WithMany(x => x.SatisBirimleri).HasForeignKey(x => x.UrunId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => new { x.StokKartId, x.BirimKodu }).IsUnique();
+        builder.HasOne(x => x.StokKart).WithMany(x => x.SatisBirimleri).HasForeignKey(x => x.StokKartId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

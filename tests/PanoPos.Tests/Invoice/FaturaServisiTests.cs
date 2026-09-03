@@ -60,7 +60,7 @@ public sealed class FaturaServisiTests : IDisposable
         var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
 
         Assert.Single(fatura.Detaylar);
-        Assert.Equal("Latte", fatura.Detaylar[0].UrunAd);
+        Assert.Equal("Latte", fatura.Detaylar[0].StokKartAd);
         Assert.Equal(120m, fatura.Detaylar[0].SatirToplam);
     }
 
@@ -200,17 +200,17 @@ public sealed class FaturaServisiTests : IDisposable
         decimal? genelIndirimOrani = null,
         decimal? genelIndirimTutari = null)
     {
-        var urun = new Urun
+        var urun = new StokKart
         {
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
             Ad = urunAd,
-            UrunTipi = UrunTipi.Mamul,
+            StokKartTipi = StokKartTipi.Mamul,
             AktifMi = true,
             SilindiMi = false
         };
 
-        _dbContext.Urunler.Add(urun);
+        _dbContext.StokKartler.Add(urun);
         await _dbContext.SaveChangesAsync();
 
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto
@@ -225,7 +225,7 @@ public sealed class FaturaServisiTests : IDisposable
 
         await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            UrunId = urun.Id,
+            StokKartId = urun.Id,
             Miktar = 2,
             BirimFiyat = 60m,
             IndirimOrani = satirIndirimOrani,

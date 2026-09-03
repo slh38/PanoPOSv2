@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PanoPos.Application.Restaurant;
 
 namespace PanoPos.WebApi.Controllers;

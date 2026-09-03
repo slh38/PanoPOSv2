@@ -1,4 +1,4 @@
-﻿using PanoPos.Application.Common;
+using PanoPos.Application.Common;
 
 namespace PanoPos.Application.Customer;
 

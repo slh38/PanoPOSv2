@@ -1,4 +1,4 @@
-﻿using PanoPos.Domain.Common;
+using PanoPos.Domain.Common;
 using PanoPos.Domain.Enums;
 
 namespace PanoPos.Domain.Entities;

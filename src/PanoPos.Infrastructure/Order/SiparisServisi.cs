@@ -101,9 +101,9 @@ public sealed class SiparisServisi : ISiparisServisi
 
     public async Task<SiparisDto> SiparisSatirEkleAsync(long id, SiparisSatirEkleRequestDto request, CancellationToken cancellationToken = default)
     {
-        if (request.UrunId <= 0 || request.Miktar <= 0 || request.BirimFiyat < 0)
+        if (request.StokKartId <= 0 || request.Miktar <= 0 || request.BirimFiyat < 0)
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "UrunId, Miktar ve BirimFiyat gecersiz.", "siparis_line_invalid");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKartId, Miktar ve BirimFiyat gecersiz.", "siparis_line_invalid");
         }
 
         SiparisSatirIndirimKontrolu(request.IndirimOrani, request.IndirimTutari);
@@ -116,12 +116,12 @@ public sealed class SiparisServisi : ISiparisServisi
             throw new UygulamaHatasi(409, "Siparis guncellenemedi", "Sadece bekleyen siparise satir eklenebilir.", "siparis_not_editable");
         }
 
-        var urun = await _dbContext.Urunler.SingleOrDefaultAsync(x => x.Id == request.UrunId, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Urun bulunamadi", "Urun bulunamadi.", "urun_not_found");
+        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
 
-        if (request.UrunVaryantId.HasValue)
+        if (request.StokKartVaryantId.HasValue)
         {
-            var varyantVar = await _dbContext.UrunVaryantlari.AnyAsync(x => x.Id == request.UrunVaryantId.Value && x.UrunId == request.UrunId, cancellationToken);
+            var varyantVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.Id == request.StokKartVaryantId.Value && x.StokKartId == request.StokKartId, cancellationToken);
             if (!varyantVar)
             {
                 throw new UygulamaHatasi(404, "Varyant bulunamadi", "Varyant bulunamadi.", "variant_not_found");
@@ -133,8 +133,8 @@ public sealed class SiparisServisi : ISiparisServisi
             TenantId = siparis.TenantId,
             SubeId = siparis.SubeId,
             SiparisId = siparis.Id,
-            UrunId = request.UrunId,
-            UrunVaryantId = request.UrunVaryantId,
+            StokKartId = request.StokKartId,
+            StokKartVaryantId = request.StokKartVaryantId,
             Miktar = request.Miktar,
             BirimFiyat = request.BirimFiyat,
             IndirimOrani = request.IndirimOrani,
@@ -157,8 +157,8 @@ public sealed class SiparisServisi : ISiparisServisi
     public async Task<SiparisDto> SiparisGetirAsync(long id, CancellationToken cancellationToken = default)
     {
         var siparis = await _dbContext.Siparisler
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.Urun)
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.UrunVaryant)
+            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
+            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
 
@@ -182,10 +182,10 @@ public sealed class SiparisServisi : ISiparisServisi
             Detaylar = siparis.Detaylar.OrderBy(x => x.Id).Select(x => new SiparisDetayDto
             {
                 Id = x.Id,
-                UrunId = x.UrunId,
-                UrunAd = x.Urun.Ad,
-                UrunVaryantId = x.UrunVaryantId,
-                VaryantKodu = x.UrunVaryant != null ? x.UrunVaryant.VaryantKodu : null,
+                StokKartId = x.StokKartId,
+                StokKartAd = x.StokKart.Ad,
+                StokKartVaryantId = x.StokKartVaryantId,
+                VaryantKodu = x.StokKartVaryant != null ? x.StokKartVaryant.VaryantKodu : null,
                 Miktar = x.Miktar,
                 BirimFiyat = x.BirimFiyat,
                 SatirAraToplam = x.SatirAraToplam,

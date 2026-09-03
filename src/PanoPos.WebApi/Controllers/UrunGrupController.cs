@@ -5,23 +5,23 @@ namespace PanoPos.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/urun-grup")]
-public sealed class UrunGrupController : ControllerBase
+public sealed class StokGrupController : ControllerBase
 {
-    private readonly IUrunGrupServisi _urunGrupServisi;
+    private readonly IStokGrupServisi _urunGrupServisi;
 
-    public UrunGrupController(IUrunGrupServisi urunGrupServisi)
+    public StokGrupController(IStokGrupServisi urunGrupServisi)
     {
         _urunGrupServisi = urunGrupServisi;
     }
 
     [HttpPost]
-    public async Task<ActionResult<UrunGrupDto>> Olustur([FromBody] UrunGrupOlusturRequestDto request, CancellationToken cancellationToken)
+    public async Task<ActionResult<StokGrupDto>> Olustur([FromBody] StokGrupOlusturRequestDto request, CancellationToken cancellationToken)
     {
         return Ok(await _urunGrupServisi.OlusturAsync(request, cancellationToken));
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<UrunGrupDto>>> Listele(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<StokGrupDto>>> Listele(CancellationToken cancellationToken)
     {
         return Ok(await _urunGrupServisi.ListeleAsync(cancellationToken));
     }
