@@ -7,9 +7,14 @@ public sealed class SiparisDetay : BaseEntity
     public long SiparisId { get; set; }
     public long UrunId { get; set; }
     public long? UrunVaryantId { get; set; }
+    public long? UrunSatisBirimiId { get; set; }
+    public string? BirimAdi { get; set; }
+    public decimal? BirimKatsayi { get; set; }
     public decimal Miktar { get; set; }
     public decimal BirimFiyat { get; set; }
     public decimal SatirAraToplam { get; set; }
+    public string FiyatParaBirimKodu { get; set; } = "TRY";
+    public decimal FiyatKur { get; set; } = 1m;
     public decimal? IndirimOrani { get; set; }
     public decimal IndirimTutari { get; set; }
     public decimal SatirNetToplam { get; set; }
@@ -19,4 +24,5 @@ public sealed class SiparisDetay : BaseEntity
     public Siparis Siparis { get; set; } = null!;
     public Urun Urun { get; set; } = null!;
     public UrunVaryant? UrunVaryant { get; set; }
+    public UrunSatisBirimi? UrunSatisBirimi { get; set; }
 }

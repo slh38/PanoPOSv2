@@ -3,7 +3,7 @@ using PanoPos.Domain.Enums;
 
 namespace PanoPos.Application.Product;
 
-public sealed class UrunOlusturRequestDto
+public class UrunOlusturRequestDto
 {
     [Range(1, long.MaxValue)]
     public long SubeId { get; set; }
@@ -15,3 +15,4 @@ public sealed class UrunOlusturRequestDto
     public long? UrunKategoriId { get; set; }
     public long? UrunGrupId { get; set; }
 }
+

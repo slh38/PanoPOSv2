@@ -9,7 +9,9 @@ public sealed class Barkod : BaseEntity
     public BarkodTipi BarkodTipi { get; set; }
     public long? UrunId { get; set; }
     public long? UrunVaryantId { get; set; }
+    public long? UrunSatisBirimiId { get; set; }
 
     public Urun? Urun { get; set; }
     public UrunVaryant? UrunVaryant { get; set; }
+    public UrunSatisBirimi? UrunSatisBirimi { get; set; }
 }

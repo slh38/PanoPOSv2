@@ -11,8 +11,12 @@ public sealed class FaturaDetayConfiguration : IEntityTypeConfiguration<FaturaDe
         builder.ToTable("FaturaDetay");
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
+        builder.Property(x => x.BirimAdi).HasMaxLength(100);
+        builder.Property(x => x.BirimKatsayi).HasColumnType("decimal(18,3)");
         builder.Property(x => x.Miktar).HasColumnType("decimal(18,3)").IsRequired();
-        builder.Property(x => x.BirimFiyat).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(x => x.BirimFiyat).HasColumnType("decimal(18,4)").IsRequired();
+        builder.Property(x => x.FiyatParaBirimKodu).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.FiyatKur).HasColumnType("decimal(18,6)").IsRequired();
         builder.Property(x => x.SatirAraToplam).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(x => x.IndirimOrani).HasColumnType("decimal(5,2)");
         builder.Property(x => x.IndirimTutari).HasColumnType("decimal(18,2)").IsRequired();
@@ -36,5 +40,10 @@ public sealed class FaturaDetayConfiguration : IEntityTypeConfiguration<FaturaDe
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.FaturaId);
+
+        builder.HasOne(x => x.UrunSatisBirimi)
+            .WithMany()
+            .HasForeignKey(x => x.UrunSatisBirimiId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

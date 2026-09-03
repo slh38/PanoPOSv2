@@ -16,4 +16,5 @@ public sealed class Urun : BaseEntity
     public UrunGrup? UrunGrup { get; set; }
     public ICollection<UrunVaryant> Varyantlar { get; set; } = new List<UrunVaryant>();
     public ICollection<Barkod> Barkodlar { get; set; } = new List<Barkod>();
+    public ICollection<UrunSatisBirimi> SatisBirimleri { get; set; } = new List<UrunSatisBirimi>();
 }

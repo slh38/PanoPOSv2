@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PanoPos.Application\PanoPos.Application.csproj" />
     <ProjectReference Include="..\..\src\PanoPos.Infrastructure\PanoPos.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\PanoPos.WebApi\PanoPos.WebApi.csproj" />
   </ItemGroup>
 
 </Project>

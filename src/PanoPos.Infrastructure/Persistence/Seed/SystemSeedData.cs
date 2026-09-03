@@ -127,4 +127,11 @@ public static class SystemSeedData
         AktifMi = true,
         SilindiMi = false
     };
+
+    public static IReadOnlyList<FiyatTipi> FiyatTipleri => new[]
+    {
+        new FiyatTipi { Id = 1, TenantId = TenantGuid, SubeId = 1, Kod = "PERAKENDE", Ad = "Perakende", OlusturmaTarihi = SeedDate, GuncellemeTarihi = SeedDate, AktifMi = true, SilindiMi = false },
+        new FiyatTipi { Id = 2, TenantId = TenantGuid, SubeId = 1, Kod = "KREDIKARTI", Ad = "Kredi Karti", OlusturmaTarihi = SeedDate, GuncellemeTarihi = SeedDate, AktifMi = true, SilindiMi = false },
+        new FiyatTipi { Id = 3, TenantId = TenantGuid, SubeId = 1, Kod = "TOPTAN", Ad = "Toptan", OlusturmaTarihi = SeedDate, GuncellemeTarihi = SeedDate, AktifMi = true, SilindiMi = false }
+    };
 }

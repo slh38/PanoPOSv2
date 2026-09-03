@@ -26,5 +26,10 @@ public sealed class BarkodConfiguration : IEntityTypeConfiguration<Barkod>
             .WithMany(x => x.Barkodlar)
             .HasForeignKey(x => x.UrunVaryantId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.UrunSatisBirimi)
+            .WithMany(x => x.Barkodlar)
+            .HasForeignKey(x => x.UrunSatisBirimiId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

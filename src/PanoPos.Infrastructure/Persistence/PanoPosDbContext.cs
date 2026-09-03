@@ -27,6 +27,9 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<KullaniciOturum> KullaniciOturumlari => Set<KullaniciOturum>();
     public DbSet<Urun> Urunler => Set<Urun>();
     public DbSet<UrunKategori> UrunKategorileri => Set<UrunKategori>();
+    public DbSet<FiyatTipi> FiyatTipleri => Set<FiyatTipi>();
+    public DbSet<UrunSatisBirimi> UrunSatisBirimleri => Set<UrunSatisBirimi>();
+    public DbSet<UrunFiyat> UrunFiyatlari => Set<UrunFiyat>();
     public DbSet<UrunGrup> UrunGruplari => Set<UrunGrup>();
     public DbSet<Renk> Renkler => Set<Renk>();
     public DbSet<Beden> Bedenler => Set<Beden>();
@@ -154,5 +157,6 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<Rol>().HasData(SystemSeedData.AdminRol);
         modelBuilder.Entity<KullaniciRol>().HasData(SystemSeedData.AdminKullaniciRol);
         modelBuilder.Entity<KullaniciSube>().HasData(SystemSeedData.AdminKullaniciSube);
+        modelBuilder.Entity<FiyatTipi>().HasData(SystemSeedData.FiyatTipleri);
     }
 }
