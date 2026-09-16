@@ -22,6 +22,8 @@ using PanoPos.Infrastructure.Payment;
 using PanoPos.Infrastructure.Persistence;
 using PanoPos.Infrastructure.Product;
 using PanoPos.Infrastructure.Restaurant;
+using PanoPos.Application.Warehouse;
+using PanoPos.Infrastructure.Warehouse;
 
 namespace PanoPos.Infrastructure;
 

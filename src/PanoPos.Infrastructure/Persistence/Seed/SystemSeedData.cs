@@ -58,6 +58,19 @@ public static class SystemSeedData
         SilindiMi = false
     };
 
+    public static Depo MerkezDepo => new()
+    {
+        Id = 1,
+        TenantId = TenantGuid,
+        SubeId = 1,
+        DepoKodu = "MERKEZ",
+        Ad = "Merkez Depo",
+        VarsayilanMi = true,
+        OlusturmaTarihi = SeedDate,
+        GuncellemeTarihi = SeedDate,
+        AktifMi = true,
+        SilindiMi = false
+    };
     public static Cihaz Cihaz => new()
     {
         Id = 1,
@@ -135,3 +148,4 @@ public static class SystemSeedData
         new FiyatTipi { Id = 3, TenantId = TenantGuid, SubeId = 1, Kod = "TOPTAN", Ad = "Toptan", OlusturmaTarihi = SeedDate, GuncellemeTarihi = SeedDate, AktifMi = true, SilindiMi = false }
     };
 }
+

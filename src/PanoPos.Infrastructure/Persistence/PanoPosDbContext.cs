@@ -14,6 +14,7 @@ public sealed class PanoPosDbContext : DbContext
     }
 
     public DbSet<Tenant> Tenantler => Set<Tenant>();
+    public DbSet<Depo> Depolar => Set<Depo>();
     public DbSet<Sube> Subeler => Set<Sube>();
     public DbSet<Cihaz> Cihazlar => Set<Cihaz>();
     public DbSet<Kasa> Kasalar => Set<Kasa>();
@@ -152,6 +153,7 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<Tenant>().HasData(SystemSeedData.Tenant);
         modelBuilder.Entity<MasaDurum>().HasData(SystemSeedData.MasaDurumBos, SystemSeedData.MasaDurumDolu, SystemSeedData.MasaDurumRezerve);
         modelBuilder.Entity<Sube>().HasData(SystemSeedData.Sube);
+        modelBuilder.Entity<Depo>().HasData(SystemSeedData.MerkezDepo);
         modelBuilder.Entity<Cihaz>().HasData(SystemSeedData.Cihaz);
         modelBuilder.Entity<Kullanici>().HasData(SystemSeedData.AdminKullanici);
         modelBuilder.Entity<Rol>().HasData(SystemSeedData.AdminRol);
@@ -160,3 +162,4 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<FiyatTipi>().HasData(SystemSeedData.FiyatTipleri);
     }
 }
+
