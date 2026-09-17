@@ -53,7 +53,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
         SiparisGenelIndirimKontrolu(request.GenelIndirimOrani, request.GenelIndirimTutari);
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         if (request.SiparisTipi == SiparisTipi.Masa && !request.AdisyonId.HasValue)
@@ -63,7 +63,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
         if (request.AdisyonId.HasValue)
         {
-            var adisyonVar = await _dbContext.Adisyonlar.AnyAsync(x => x.Id == request.AdisyonId.Value && x.TenantId == sube.TenantId && x.SubeId == sube.Id && x.Durum == AdisyonDurumu.Acik, cancellationToken);
+            var adisyonVar = await _dbContext.Adisyonlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.AdisyonId.Value && x.TenantId == sube.TenantId && x.SubeId == sube.Id && x.Durum == AdisyonDurumu.Acik, cancellationToken);
             if (!adisyonVar)
             {
                 throw new UygulamaHatasi(404, "Adisyon bulunamadi", "Acik adisyon bulunamadi.", "open_adisyon_not_found");
@@ -72,14 +72,14 @@ public sealed class SiparisServisi : ISiparisServisi
 
         if (request.CariId.HasValue)
         {
-            var cariVar = await _dbContext.CariKartlar.AnyAsync(x => x.Id == request.CariId.Value && x.TenantId == sube.TenantId && x.AktifMi && x.SubeId == request.SubeId, cancellationToken);
+            var cariVar = await _dbContext.CariKartlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.CariId.Value && x.TenantId == sube.TenantId && x.AktifMi && x.SubeId == request.SubeId, cancellationToken);
             if (!cariVar)
             {
                 throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
             }
         }
 
-        var dahil = await _dbContext.TenantAyarlari.Where(x => x.TenantId == sube.TenantId).Select(x => (bool?)x.SatisFiyatlariKdvDahilMi).SingleOrDefaultAsync(cancellationToken) ?? true;
+        var dahil = await _dbContext.TenantAyarlari.TenantKapsami(_dbContext).Where(x => x.TenantId == sube.TenantId).Select(x => (bool?)x.SatisFiyatlariKdvDahilMi).SingleOrDefaultAsync(cancellationToken) ?? true;
         var siparis = new Siparis
         {
             KdvDahilMi = dahil,
@@ -119,7 +119,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
         SiparisSatirIndirimKontrolu(request.IndirimOrani, request.IndirimTutari);
 
-        var siparis = await _dbContext.Siparisler.Include(x => x.Detaylar).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).Include(x => x.Detaylar).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
 
         if (siparis.Durum != SiparisDurumu.Bekliyor)
@@ -127,28 +127,31 @@ public sealed class SiparisServisi : ISiparisServisi
             throw new UygulamaHatasi(409, "Siparis guncellenemedi", "Sadece bekleyen siparise satir eklenebilir.", "siparis_not_editable");
         }
 
-        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+        var stokKart = await _dbContext.StokKartler.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
             ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         if (request.StokKartVaryantId.HasValue)
         {
-            var varyantVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.Id == request.StokKartVaryantId.Value && x.StokKartId == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken);
+            var varyantVar = await _dbContext.StokKartVaryantlari.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.StokKartVaryantId.Value && x.StokKartId == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken);
             if (!varyantVar)
             {
                 throw new UygulamaHatasi(404, "Varyant bulunamadi", "Varyant bulunamadi.", "variant_not_found");
             }
         }
 
-        var kdv = await _dbContext.Kdvler.SingleOrDefaultAsync(x => x.Id == stokKart.KdvId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+        var kdv = await _dbContext.Kdvler.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == stokKart.KdvId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
             ?? throw new UygulamaHatasi(400, "Gecersiz KDV", "Stok kartinin aktif KDV kaydi bulunamadi.", "kdv_invalid");
         StokKartSatisBirimi? birim = null;
+        if (request.FiyatTipiId.HasValue && !await _dbContext.FiyatTipleri.TenantKapsami(_dbContext)
+            .AnyAsync(x => x.Id == request.FiyatTipiId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken))
+            throw new UygulamaHatasi(404, "Fiyat tipi bulunamadi", "Aktif fiyat tipi bulunamadi.", "price_type_not_found");
         if (request.StokKartSatisBirimiId.HasValue)
-            birim = await _dbContext.StokKartSatisBirimleri.SingleOrDefaultAsync(x => x.Id == request.StokKartSatisBirimiId &&
+            birim = await _dbContext.StokKartSatisBirimleri.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.StokKartSatisBirimiId &&
                 x.StokKartId == stokKart.Id && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
                 ?? throw new UygulamaHatasi(400, "Gecersiz birim", "Satis birimi bulunamadi.", "sales_unit_invalid");
         else
         {
-            var varsayilanlar = await _dbContext.StokKartSatisBirimleri.Where(x => x.StokKartId == stokKart.Id &&
+            var varsayilanlar = await _dbContext.StokKartSatisBirimleri.TenantKapsami(_dbContext).Where(x => x.StokKartId == stokKart.Id &&
                 x.TenantId == siparis.TenantId && x.AktifMi && x.VarsayilanMi).Take(2).ToListAsync(cancellationToken);
             if (varsayilanlar.Count > 1)
                 throw new UygulamaHatasi(400, "Gecersiz birim", "Birden fazla varsayilan satis birimi var.", "sales_unit_invalid");
@@ -181,7 +184,7 @@ public sealed class SiparisServisi : ISiparisServisi
         _dbContext.SiparisDetaylari.Add(detay);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var detaylar = await _dbContext.SiparisDetaylari.Where(x => x.SiparisId == siparis.Id && x.AktifMi).OrderBy(x => x.Id).ToListAsync(cancellationToken);
+        var detaylar = await _dbContext.SiparisDetaylari.SubeKapsami(_dbContext).Where(x => x.SiparisId == siparis.Id && x.AktifMi).OrderBy(x => x.Id).ToListAsync(cancellationToken);
         SiparisToplamlariniHesapla(siparis, detaylar);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -191,7 +194,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
     public async Task<SiparisDto> SiparisGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var siparis = await _dbContext.Siparisler
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext)
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
@@ -248,7 +251,7 @@ public sealed class SiparisServisi : ISiparisServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler.Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext).Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
         if (tenantId == Guid.Empty)
         {
             throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
@@ -301,7 +304,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<SiparisDto> SiparisIptalAsync(long id, SiparisIptalRequestDto? request = null, CancellationToken cancellationToken = default)
     {
-        var siparis = await _dbContext.Siparisler.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
 
         if (siparis.Durum == SiparisDurumu.Iptal)
@@ -383,7 +386,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
     private async Task<string> SiparisNoUretAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var bugun = DateTime.UtcNow.ToString("yyyyMMdd");
-        var oncekiSayac = await _dbContext.Siparisler
+        var oncekiSayac = await _dbContext.Siparisler.TenantKapsami(_dbContext)
             .Where(x => x.TenantId == tenantId && x.SiparisNo.StartsWith($"SIP-{bugun}-"))
             .Select(x => x.SiparisNo)
             .ToListAsync(cancellationToken);

@@ -35,10 +35,10 @@ public sealed class KdvServisi(PanoPosDbContext db) : IKdvServisi
     public async Task DeleteAsync(long id, long subeId, CancellationToken ct = default)
     {
         var entity = await FindAsync(id, subeId, ct);
-        if (await db.StokKartler.IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
-            await db.SiparisDetaylari.IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
-            await db.FaturaDetaylari.IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
-            await db.AlisFaturaDetaylari.IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct))
+        if (await db.StokKartler.TenantKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
+            await db.SiparisDetaylari.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
+            await db.FaturaDetaylari.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct) ||
+            await db.AlisFaturaDetaylari.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.KdvId == id, ct))
             throw new UygulamaHatasi(409, "KDV kullaniliyor", "Kullanimdaki KDV silinemez.", "kdv_in_use");
         db.Kdvler.Remove(entity);
         await db.SaveChangesAsync(ct);
@@ -56,12 +56,12 @@ public sealed class KdvServisi(PanoPosDbContext db) : IKdvServisi
         return new() { Kayitlar = rows.ToList(), ToplamKayit = count, Sayfa = page, SayfaBoyutu = pageSize };
     }
     private async Task<Guid> TenantAsync(long subeId, CancellationToken ct) =>
-        (await db.Subeler.SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct)
+        (await db.Subeler.YetkiliSube(db).SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct)
         ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found")).TenantId;
     private async Task<Kdv> FindAsync(long id, long subeId, CancellationToken ct)
     {
         var tenant = await TenantAsync(subeId, ct);
-        return await db.Kdvler.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant, ct)
+        return await db.Kdvler.TenantKapsami(db).SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant, ct)
             ?? throw new UygulamaHatasi(404, "KDV bulunamadi", "KDV bulunamadi.", "kdv_not_found");
     }
     private async Task ValidateAsync(KdvKaydetRequest r, Guid tenant, long? id, CancellationToken ct)
@@ -71,7 +71,7 @@ public sealed class KdvServisi(PanoPosDbContext db) : IKdvServisi
             r.Oran is < 0 or > 100 || decimal.Round(r.Oran, 2) != r.Oran)
             throw new UygulamaHatasi(400, "Gecersiz KDV", "Kod, ad veya oran gecersiz.", "kdv_invalid");
         var kod = r.Kod.Trim().ToUpperInvariant();
-        if (r.AktifMi && await db.Kdvler.AnyAsync(x => x.TenantId == tenant && x.Id != id && x.AktifMi && (x.Kod == kod || x.Oran == r.Oran), ct))
+        if (r.AktifMi && await db.Kdvler.TenantKapsami(db).AnyAsync(x => x.TenantId == tenant && x.Id != id && x.AktifMi && (x.Kod == kod || x.Oran == r.Oran), ct))
             throw new UygulamaHatasi(409, "KDV tekrari", "Aktif KDV kodu veya orani tekrar edemez.", "kdv_duplicate");
     }
     private static KdvDto Map(Kdv k) => new() { Id = k.Id, Kod = k.Kod, Ad = k.Ad, Oran = k.Oran, AktifMi = k.AktifMi };

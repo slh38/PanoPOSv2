@@ -27,7 +27,7 @@ public sealed class MasaGrupServisi : IMasaGrupServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Masa grup adi bos olamaz.", "masa_grup_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = NormalizeOptional(request.Kod);
@@ -54,7 +54,7 @@ public sealed class MasaGrupServisi : IMasaGrupServisi
 
     public async Task<List<MasaGrupDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.MasaGruplari
+        return await _dbContext.MasaGruplari.SubeKapsami(_dbContext)
             .AsNoTracking()
             .OrderBy(x => x.Ad)
             .Select(x => new MasaGrupDto

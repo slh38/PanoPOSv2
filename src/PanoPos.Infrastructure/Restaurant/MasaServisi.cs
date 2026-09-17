@@ -33,10 +33,10 @@ public sealed class MasaServisi : IMasaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Kapasite 0'dan buyuk olmalidir.", "masa_capacity_invalid");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
-        if (request.MasaGrupId.HasValue && !await _dbContext.MasaGruplari.AnyAsync(x => x.Id == request.MasaGrupId.Value && x.AktifMi, cancellationToken))
+        if (request.MasaGrupId.HasValue && !await _dbContext.MasaGruplari.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.MasaGrupId.Value && x.AktifMi, cancellationToken))
         {
             throw new UygulamaHatasi(404, "Masa grup bulunamadi", "Masa grup bulunamadi.", "masa_grup_not_found");
         }
@@ -57,7 +57,7 @@ public sealed class MasaServisi : IMasaServisi
         _dbContext.Masalar.Add(masa);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await _dbContext.Masalar
+        return await _dbContext.Masalar.SubeKapsami(_dbContext)
             .AsNoTracking()
             .Where(x => x.Id == masa.Id)
             .Select(x => new MasaDto
@@ -83,7 +83,7 @@ public sealed class MasaServisi : IMasaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        return await _dbContext.Masalar
+        return await _dbContext.Masalar.SubeKapsami(_dbContext)
             .AsNoTracking()
             .Where(x => x.SubeId == subeId)
             .OrderBy(x => x.Ad)

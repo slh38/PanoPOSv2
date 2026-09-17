@@ -12,6 +12,8 @@ public sealed class KullaniciOturumConfiguration : IEntityTypeConfiguration<Kull
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
         builder.Property(x => x.GirisTarihi).IsRequired();
+        builder.Property(x => x.OturumTokenHash).HasMaxLength(64);
+        builder.HasIndex(x => x.OturumTokenHash).IsUnique().HasFilter("[OturumTokenHash] IS NOT NULL");
         builder.HasIndex(x => new { x.KullaniciId, x.AktifMi });
 
         builder.HasOne(x => x.Kullanici)

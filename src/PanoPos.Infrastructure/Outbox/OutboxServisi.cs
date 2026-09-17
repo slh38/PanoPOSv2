@@ -19,9 +19,15 @@ public sealed class OutboxServisi : IOutboxServisi
 
     public async Task<OutboxOlayDto> OlayEkleAsync(OutboxOlayEkleRequestDto request, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.Baglam() is { } context)
+        {
+            request.TenantId = context.TenantId;
+            request.SubeId = context.SubeId;
+            request.CihazId = context.CihazId;
+        }
         ValidateEkleRequest(request);
 
-        var cihazVar = await _dbContext.Cihazlar.AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId, cancellationToken);
+        var cihazVar = await _dbContext.Cihazlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId, cancellationToken);
         if (!cihazVar)
         {
             throw new UygulamaHatasi(404, "Cihaz bulunamadi", "Cihaz bulunamadi.", "cihaz_not_found");
@@ -58,7 +64,7 @@ public sealed class OutboxServisi : IOutboxServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler.Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext).Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
         if (tenantId == Guid.Empty)
         {
             throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
@@ -108,7 +114,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<OutboxOlayDto> GonderildiIsaretleAsync(long id, CancellationToken cancellationToken = default)
     {
-        var olay = await _dbContext.OutboxOlaylari.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var olay = await _dbContext.OutboxOlaylari.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Outbox olay bulunamadi", "Outbox olay bulunamadi.", "outbox_not_found");
 
         olay.Durum = OutboxDurumu.Gonderildi;
@@ -126,7 +132,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "Hata mesaji zorunludur.", "outbox_error_required");
         }
 
-        var olay = await _dbContext.OutboxOlaylari.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var olay = await _dbContext.OutboxOlaylari.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Outbox olay bulunamadi", "Outbox olay bulunamadi.", "outbox_not_found");
 
         olay.Durum = OutboxDurumu.Hata;
@@ -140,7 +146,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<OutboxOlayDto> GetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var olay = await _dbContext.OutboxOlaylari.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var olay = await _dbContext.OutboxOlaylari.SubeKapsami(_dbContext).AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Outbox olay bulunamadi", "Outbox olay bulunamadi.", "outbox_not_found");
 
         return MapDto(olay);

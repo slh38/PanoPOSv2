@@ -8,9 +8,12 @@ namespace PanoPos.Infrastructure.Persistence;
 
 public sealed class PanoPosDbContext : DbContext
 {
-    public PanoPosDbContext(DbContextOptions<PanoPosDbContext> options)
+    public PanoPos.Application.Auth.IIslemBaglami? IslemBaglami { get; }
+
+    public PanoPosDbContext(DbContextOptions<PanoPosDbContext> options, PanoPos.Application.Auth.IIslemBaglami? islemBaglami = null)
         : base(options)
     {
+        IslemBaglami = islemBaglami;
     }
 
     public DbSet<Tenant> Tenantler => Set<Tenant>();
@@ -112,6 +115,21 @@ public sealed class PanoPosDbContext : DbContext
     private void ApplyEntityRules()
     {
         var utcNow = DateTime.UtcNow;
+        if (IslemBaglami is { Dogrulandi: true } context)
+        {
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            {
+                if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted)) continue;
+                if (entry.Entity.TenantId != context.TenantId)
+                    throw new PanoPos.Application.Common.UygulamaHatasi(403, "Yetkisiz kayit", "Kayit aktif tenant kapsaminda degil.", "tenant_mismatch");
+                if (entry.State == EntityState.Added) entry.Entity.OlusturanKullaniciId = context.KullaniciId;
+                entry.Entity.GuncelleyenKullaniciId = context.KullaniciId;
+                if (entry.State == EntityState.Deleted || entry.Entity.SilindiMi)
+                    entry.Entity.SilenKullaniciId = context.KullaniciId;
+            }
+            foreach (var entry in ChangeTracker.Entries<StokHareket>().Where(x => x.State == EntityState.Added))
+                entry.Entity.OlusturanKullaniciId = context.KullaniciId;
+        }
         foreach (var entry in ChangeTracker.Entries<Fatura>())
         {
             var changesStock = entry.State == EntityState.Deleted ||

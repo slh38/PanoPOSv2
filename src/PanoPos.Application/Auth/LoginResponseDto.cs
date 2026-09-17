@@ -2,6 +2,9 @@ namespace PanoPos.Application.Auth;
 
 public sealed class LoginResponseDto
 {
+    public string OturumToken { get; set; } = string.Empty;
+    public Guid TenantId { get; set; }
+    public long SubeId { get; set; }
     public long KullaniciId { get; set; }
     public string AdSoyad { get; set; } = string.Empty;
     public long VarsayilanSubeId { get; set; }

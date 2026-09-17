@@ -40,7 +40,7 @@ public sealed partial class StokServisi(PanoPosDbContext db, IIslemLogServisi au
             await ValidateDepoAsync(tenant, r.SubeId, depoId!.Value, ct);
 
         var fisNo = string.IsNullOrWhiteSpace(r.FisNo) ? await NextNumberAsync(tenant, ct) : r.FisNo.Trim();
-        if (await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant && x.FisNo == fisNo, ct))
+        if (await db.StokFisleri.TenantKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant && x.FisNo == fisNo, ct))
             throw new UygulamaHatasi(409, "Stok fisi mevcut", "Bu fis numarasi daha once kullanildi.", "stock_document_duplicate");
         var fis = new StokFis {
             TenantId = tenant, SubeId = r.SubeId, StokFisTipi = tip, FisNo = fisNo,
@@ -54,7 +54,7 @@ public sealed partial class StokServisi(PanoPosDbContext db, IIslemLogServisi au
             if (item.Miktar < 0 || (tip != StokFisTipi.Sayim && item.Miktar == 0) || item.Aciklama?.Length > 500)
                 throw Error("Devir/transfer miktari pozitif, sayilan miktar sifir veya pozitif olmalidir.");
             await ValidateStockAsync(tenant, item.StokKartId, item.StokKartVaryantId, ct);
-            var unit = await db.StokKartSatisBirimleri.AsNoTracking().SingleOrDefaultAsync(x =>
+            var unit = await db.StokKartSatisBirimleri.TenantKapsami(db).AsNoTracking().SingleOrDefaultAsync(x =>
                 x.Id == item.StokKartSatisBirimiId && x.TenantId == tenant &&
                 x.StokKartId == item.StokKartId && x.AktifMi, ct)
                 ?? throw Error("Aktif satis birimi bu stok kartina ve tenant'a ait olmalidir.");
@@ -118,24 +118,24 @@ public sealed partial class StokServisi(PanoPosDbContext db, IIslemLogServisi au
 
     private async Task<Guid> TenantAsync(long subeId, CancellationToken ct)
     {
-        var sube = await db.Subeler.AsNoTracking().SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct)
+        var sube = await db.Subeler.YetkiliSube(db).AsNoTracking().SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct)
             ?? throw Error("Aktif sube bulunamadi.");
-        if (!await db.Tenantler.AnyAsync(x => x.TenantId == sube.TenantId && x.AktifMi, ct))
+        if (!await db.Tenantler.TenantKapsami(db).AnyAsync(x => x.TenantId == sube.TenantId && x.AktifMi, ct))
             throw Error("Aktif tenant bulunamadi.");
         return sube.TenantId;
     }
 
     private async Task ValidateDepoAsync(Guid tenant, long subeId, long depoId, CancellationToken ct)
     {
-        if (!await db.Depolar.AnyAsync(x => x.Id == depoId && x.TenantId == tenant && x.SubeId == subeId && x.AktifMi, ct))
+        if (!await db.Depolar.SubeKapsami(db).AnyAsync(x => x.Id == depoId && x.TenantId == tenant && x.SubeId == subeId && x.AktifMi, ct))
             throw Error("Depo aktif olmali ve islemin tenant/subesine ait olmalidir.");
     }
 
     private async Task ValidateStockAsync(Guid tenant, long stockId, long? variantId, CancellationToken ct)
     {
-        if (!await db.StokKartler.AnyAsync(x => x.Id == stockId && x.TenantId == tenant && x.AktifMi, ct))
+        if (!await db.StokKartler.TenantKapsami(db).AnyAsync(x => x.Id == stockId && x.TenantId == tenant && x.AktifMi, ct))
             throw Error("Aktif stok karti bu tenant icinde bulunamadi.");
-        if (variantId.HasValue && !await db.StokKartVaryantlari.AnyAsync(x =>
+        if (variantId.HasValue && !await db.StokKartVaryantlari.TenantKapsami(db).AnyAsync(x =>
             x.Id == variantId && x.StokKartId == stockId && x.TenantId == tenant && x.AktifMi, ct))
             throw Error("Aktif varyant bu stok kartina ve tenant'a ait olmalidir.");
     }
@@ -143,7 +143,7 @@ public sealed partial class StokServisi(PanoPosDbContext db, IIslemLogServisi au
     private async Task<string> NextNumberAsync(Guid tenant, CancellationToken ct)
     {
         var prefix = $"STK-{DateTime.UtcNow:yyyyMMdd}-";
-        var numbers = await db.StokFisleri.IgnoreQueryFilters().Where(x => x.TenantId == tenant && x.FisNo.StartsWith(prefix))
+        var numbers = await db.StokFisleri.TenantKapsami(db).IgnoreQueryFilters().Where(x => x.TenantId == tenant && x.FisNo.StartsWith(prefix))
             .Select(x => x.FisNo).ToListAsync(ct);
         var next = numbers.Select(x => long.TryParse(x[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty().Max() + 1;
         return $"{prefix}{next:000000}";

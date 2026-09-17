@@ -44,7 +44,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         await LockOrderAsync(request.SiparisId, cancellationToken);
-        var siparis = await _dbContext.Siparisler.AsNoTracking()
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).AsNoTracking()
             .Include(x => x.Detaylar.Where(y => y.AktifMi))
             .SingleOrDefaultAsync(x => x.Id == request.SiparisId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
@@ -61,7 +61,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
 
         FaturaKaynakSiparisKontrolu(siparis);
 
-        var mevcutFaturaVar = await _dbContext.Faturalar.AnyAsync(x => x.SiparisId == siparis.Id && x.Durum != FaturaDurumu.Iptal, cancellationToken);
+        var mevcutFaturaVar = await _dbContext.Faturalar.SubeKapsami(_dbContext).AnyAsync(x => x.SiparisId == siparis.Id && x.Durum != FaturaDurumu.Iptal, cancellationToken);
         if (mevcutFaturaVar)
         {
             throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Bu siparisten zaten fatura olusturulmus.", "invoice_already_exists");
@@ -126,7 +126,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
         await _dbContext.SaveChangesAsync(cancellationToken);
         await CreateSalesStockAsync(fatura, cancellationToken);
 
-        var trackedOrder = await _dbContext.Siparisler.SingleAsync(x => x.Id == siparis.Id, cancellationToken);
+        var trackedOrder = await _dbContext.Siparisler.SubeKapsami(_dbContext).SingleAsync(x => x.Id == siparis.Id, cancellationToken);
         await _dbContext.Entry(trackedOrder).ReloadAsync(cancellationToken);
         trackedOrder.Durum = SiparisDurumu.Tamamlandi;
         trackedOrder.AktifMi = false;
@@ -136,7 +136,9 @@ public sealed partial class FaturaServisi : IFaturaServisi
         {
             TenantId = fatura.TenantId,
             SubeId = fatura.SubeId,
-            CihazId = 1,
+            CihazId = _dbContext.Baglam()?.CihazId ?? await _dbContext.Cihazlar
+                .Where(x => x.TenantId == fatura.TenantId && x.SubeId == fatura.SubeId && x.AktifMi)
+                .OrderBy(x => x.Id).Select(x => x.Id).FirstAsync(cancellationToken),
             OlayTipi = "FaturaSiparistenOlusturuldu",
             KaynakTablo = nameof(Fatura),
             KaynakId = fatura.Id,
@@ -159,7 +161,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
 
     public async Task<FaturaDto> FaturaGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var fatura = await _dbContext.Faturalar
+        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext)
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
@@ -221,7 +223,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler.Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext).Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
         if (tenantId == Guid.Empty)
         {
             throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
@@ -274,12 +276,14 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<FaturaDto> FaturaKapatAsync(long id, FaturaKapatRequestDto request, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.Baglam() is { } context)
+            request.KapatanKullaniciId = IslemKapsami.Kimlik(request.KapatanKullaniciId, context.KullaniciId);
         if (request.KapatanKullaniciId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "KapatanKullaniciId zorunludur.", "closing_user_required");
         }
 
-        var fatura = await _dbContext.Faturalar.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
 
         if (fatura.Durum != FaturaDurumu.Acik)
@@ -300,9 +304,9 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<FaturaDto> FaturaIptalAsync(long id, FaturaIptalRequestDto? request = null, CancellationToken cancellationToken = default)
     {
-        if (await _dbContext.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.FaturaId == id, cancellationToken))
+        if (await _dbContext.StokFisleri.SubeKapsami(_dbContext).IgnoreQueryFilters().AnyAsync(x => x.FaturaId == id, cancellationToken))
             throw new UygulamaHatasi(409, "Fatura iptal edilemedi", "Stok cikisi bulunan fatura icin ters stok hareketi gereklidir.", "sales_stock_reversal_required");
-        var fatura = await _dbContext.Faturalar.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
 
         if (fatura.Durum == FaturaDurumu.Iptal)
@@ -329,7 +333,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
     private async Task<string> FaturaNoUretAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var bugun = DateTime.UtcNow.ToString("yyyyMMdd");
-        var oncekiler = await _dbContext.Faturalar
+        var oncekiler = await _dbContext.Faturalar.TenantKapsami(_dbContext)
             .Where(x => x.TenantId == tenantId && x.FaturaNo.StartsWith($"FTR-{bugun}-"))
             .Select(x => x.FaturaNo)
             .ToListAsync(cancellationToken);

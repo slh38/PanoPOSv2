@@ -47,7 +47,7 @@ public sealed class CariKartServisi : ICariKartServisi
     {
         ValidateRequest(request.SubeId, request.Ad);
 
-        var cari = await _dbContext.CariKartlar.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == request.SubeId, cancellationToken)
+        var cari = await _dbContext.CariKartlar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id && x.SubeId == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
 
         await CariKoduTekrarKontroluAsync(cari.TenantId, request.CariKodu, cari.Id, cancellationToken);
@@ -71,7 +71,7 @@ public sealed class CariKartServisi : ICariKartServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        var cari = await _dbContext.CariKartlar.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
+        var cari = await _dbContext.CariKartlar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
 
         return MapDto(cari);
@@ -89,7 +89,7 @@ public sealed class CariKartServisi : ICariKartServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext)
             .Where(x => x.Id == subeId)
             .Select(x => x.TenantId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -155,7 +155,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private async Task<Sube> GetSubeAsync(long subeId, CancellationToken cancellationToken)
     {
-        return await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == subeId, cancellationToken)
+        return await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == subeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
     }
 
@@ -167,7 +167,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             return;
         }
 
-        var exists = await _dbContext.CariKartlar.AnyAsync(
+        var exists = await _dbContext.CariKartlar.TenantKapsami(_dbContext).AnyAsync(
             x => x.TenantId == tenantId && x.CariKodu == normalized && (!cariId.HasValue || x.Id != cariId.Value),
             cancellationToken);
 

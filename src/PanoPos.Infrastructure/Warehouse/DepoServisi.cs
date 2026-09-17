@@ -163,15 +163,15 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task EnsureDefaultDepoAsync(Guid tenantId, long subeId, CancellationToken cancellationToken = default)
     {
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == subeId && x.TenantId == tenantId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == subeId && x.TenantId == tenantId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
-        if (await _dbContext.Depolar.AnyAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.VarsayilanMi && x.AktifMi, cancellationToken))
+        if (await _dbContext.Depolar.SubeKapsami(_dbContext).AnyAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.VarsayilanMi && x.AktifMi, cancellationToken))
         {
             return;
         }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var merkez = await _dbContext.Depolar.SingleOrDefaultAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.DepoKodu == "MERKEZ", cancellationToken);
+        var merkez = await _dbContext.Depolar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.DepoKodu == "MERKEZ", cancellationToken);
         if (merkez is null)
         {
             merkez = new Depo { TenantId = tenantId, SubeId = sube.Id, DepoKodu = "MERKEZ", Ad = "Merkez Depo", VarsayilanMi = true, AktifMi = true };
@@ -199,20 +199,20 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        return await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == subeId, cancellationToken)
+        return await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == subeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
     }
 
     private async Task<Depo> GetDepoAsync(long id, long subeId, CancellationToken cancellationToken)
     {
         await GetSubeAsync(subeId, cancellationToken);
-        return await _dbContext.Depolar.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
+        return await _dbContext.Depolar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Depo bulunamadi", "Depo bulunamadi.", "depo_not_found");
     }
 
     private async Task EnsureCodeAvailableAsync(Guid tenantId, long subeId, string depoKodu, long? excludedId, CancellationToken cancellationToken)
     {
-        var exists = await _dbContext.Depolar.AnyAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.DepoKodu == depoKodu && x.AktifMi && (!excludedId.HasValue || x.Id != excludedId.Value), cancellationToken);
+        var exists = await _dbContext.Depolar.SubeKapsami(_dbContext).AnyAsync(x => x.TenantId == tenantId && x.SubeId == subeId && x.DepoKodu == depoKodu && x.AktifMi && (!excludedId.HasValue || x.Id != excludedId.Value), cancellationToken);
         if (exists)
         {
             throw new UygulamaHatasi(409, "Depo hatasi", "Depo kodu tekrar edemez.", "depo_duplicate");
@@ -221,7 +221,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private async Task ClearDefaultAsync(Guid tenantId, long subeId, CancellationToken cancellationToken, long? excludedId = null)
     {
-        var defaults = await _dbContext.Depolar.Where(x => x.TenantId == tenantId && x.SubeId == subeId && x.VarsayilanMi && (!excludedId.HasValue || x.Id != excludedId.Value)).ToListAsync(cancellationToken);
+        var defaults = await _dbContext.Depolar.SubeKapsami(_dbContext).Where(x => x.TenantId == tenantId && x.SubeId == subeId && x.VarsayilanMi && (!excludedId.HasValue || x.Id != excludedId.Value)).ToListAsync(cancellationToken);
         foreach (var depo in defaults)
         {
             depo.VarsayilanMi = false;

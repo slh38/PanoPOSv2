@@ -8,7 +8,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebApiServices(this IServiceCollection services)
     {
         services.AddExceptionHandler<GlobalExceptionHandler>();
-        services.AddControllers();
+        services.AddControllers(options => options.Filters.Add<PanoPos.WebApi.Authentication.IslemBaglamiFiltresi>());
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
         services.AddProblemDetails();

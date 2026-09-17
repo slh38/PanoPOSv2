@@ -22,11 +22,11 @@ public sealed class StokGrupServisi : IStokGrupServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Grup adi zorunludur.", "stok_grup_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = NormalizeOptional(request.Kod);
-        if (kod is not null && await _dbContext.StokGruplari.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
+        if (kod is not null && await _dbContext.StokGruplari.TenantKapsami(_dbContext).AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
         {
             throw new UygulamaHatasi(409, "Grup hatasi", "Ayni tenant icinde grup kodu tekrar edemez.", "stok_grup_duplicate");
         }
@@ -54,7 +54,7 @@ public sealed class StokGrupServisi : IStokGrupServisi
 
     public async Task<List<StokGrupDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.StokGruplari
+        return await _dbContext.StokGruplari.TenantKapsami(_dbContext)
             .OrderBy(x => x.Ad)
             .Select(x => new StokGrupDto
             {

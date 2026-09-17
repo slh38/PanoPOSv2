@@ -14,7 +14,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
     public async Task<AlisFaturaDto> CreateAsync(AlisFaturaKaydetRequest r, CancellationToken ct = default)
     {
         var tenant = await TenantAsync(r.SubeId, ct);
-        var dahil = await db.TenantAyarlari.Where(x => x.TenantId == tenant).Select(x => (bool?)x.AlisFiyatlariKdvDahilMi).SingleOrDefaultAsync(ct) ?? false;
+        var dahil = await db.TenantAyarlari.TenantKapsami(db).Where(x => x.TenantId == tenant).Select(x => (bool?)x.AlisFiyatlariKdvDahilMi).SingleOrDefaultAsync(ct) ?? false;
         var f = new AlisFatura { TenantId = tenant, SubeId = r.SubeId, KdvDahilMi = dahil, Durum = AlisFaturaDurumu.Taslak };
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await ApplyAsync(f, r, ct);
@@ -41,7 +41,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
             r.FaturaTarihi == default || r.Detaylar is null || r.Detaylar.Count == 0 ||
             r.Aciklama?.Length > 500 || (r.GenelIndirimOrani.HasValue && r.GenelIndirimTutari.HasValue))
             throw Error("Fatura bilgileri veya genel indirim gecersiz.");
-        if (!await db.CariKartlar.AnyAsync(x => x.Id == r.CariId && x.TenantId == f.TenantId && x.AktifMi, ct))
+        if (!await db.CariKartlar.SubeKapsami(db).AnyAsync(x => x.Id == r.CariId && x.TenantId == f.TenantId && x.AktifMi, ct))
             throw Error("Ayni tenant icinde aktif cari secilmelidir.");
         var currency = Currency(r.ParaBirimKodu);
         var rate = Rate(currency, r.Kur);
@@ -65,13 +65,13 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
             }
             else
             {
-                var stok = await db.StokKartler.SingleOrDefaultAsync(x => x.Id == item.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct)
+                var stok = await db.StokKartler.TenantKapsami(db).SingleOrDefaultAsync(x => x.Id == item.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct)
                     ?? throw Error("Aktif stok karti bulunamadi.");
-                var kdv = await db.Kdvler.SingleOrDefaultAsync(x => x.Id == stok.KdvId && x.TenantId == f.TenantId && x.AktifMi, ct)
+                var kdv = await db.Kdvler.TenantKapsami(db).SingleOrDefaultAsync(x => x.Id == stok.KdvId && x.TenantId == f.TenantId && x.AktifMi, ct)
                     ?? throw Error("Aktif KDV bulunamadi.");
-                var birim = await db.StokKartSatisBirimleri.SingleOrDefaultAsync(x => x.Id == item.StokKartSatisBirimiId &&
+                var birim = await db.StokKartSatisBirimleri.TenantKapsami(db).SingleOrDefaultAsync(x => x.Id == item.StokKartSatisBirimiId &&
                     x.StokKartId == stok.Id && x.TenantId == f.TenantId && x.AktifMi, ct) ?? throw Error("Satis birimi bulunamadi.");
-                if (item.StokKartVaryantId.HasValue && !await db.StokKartVaryantlari.AnyAsync(x =>
+                if (item.StokKartVaryantId.HasValue && !await db.StokKartVaryantlari.TenantKapsami(db).AnyAsync(x =>
                     x.Id == item.StokKartVaryantId && x.StokKartId == stok.Id && x.TenantId == f.TenantId && x.AktifMi, ct))
                     throw Error("Varyant bulunamadi.");
                 line = new AlisFaturaDetay { TenantId = f.TenantId, SubeId = f.SubeId, StokKartId = stok.Id,
@@ -124,7 +124,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await LockInvoiceAsync(id, subeId, ct);
         var f = await FindAsync(id, subeId, ct);
-        var hasStock = await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct);
+        var hasStock = await db.StokFisleri.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct);
         if (f.Durum != AlisFaturaDurumu.Kesinlesti)
         {
             EnsureDraft(f);
@@ -144,7 +144,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await LockInvoiceAsync(id, subeId, ct);
         var f = await FindAsync(id, subeId, ct);
-        if (await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct))
+        if (await db.StokFisleri.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct))
             throw new UygulamaHatasi(409, "Stoklanmis fatura iptal edilemez",
                 "Stok girisi yapilmis alis faturasi ters hareket olmadan iptal edilemez.", "purchase_stock_reversal_required");
         // TODO: Purchase returns/reversals require a separate domain operation.
@@ -174,11 +174,11 @@ AND (@Search IS NULL OR f.FaturaNo LIKE @Search OR c.CariKodu LIKE @Search OR c.
         return new() { Kayitlar = rows.ToList(), ToplamKayit = count, Sayfa = r.Page, SayfaBoyutu = r.PageSize };
     }
     private async Task<Guid> TenantAsync(long subeId, CancellationToken ct) =>
-        (await db.Subeler.SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct) ?? throw Error("Sube bulunamadi.")).TenantId;
+        (await db.Subeler.YetkiliSube(db).SingleOrDefaultAsync(x => x.Id == subeId && x.AktifMi, ct) ?? throw Error("Sube bulunamadi.")).TenantId;
     private async Task<AlisFatura> FindAsync(long id, long subeId, CancellationToken ct)
     {
         var tenant = await TenantAsync(subeId, ct);
-        return await db.AlisFaturalar.IgnoreQueryFilters().Include(x => x.CariKart).Include(x => x.Detaylar.Where(d => !d.SilindiMi))
+        return await db.AlisFaturalar.SubeKapsami(db).IgnoreQueryFilters().Include(x => x.CariKart).Include(x => x.Detaylar.Where(d => !d.SilindiMi))
             .SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant && x.SubeId == subeId && !x.SilindiMi, ct)
             ?? throw new UygulamaHatasi(404, "Alis faturasi bulunamadi", "Alis faturasi bulunamadi.", "purchase_not_found");
     }

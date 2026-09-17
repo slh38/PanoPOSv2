@@ -4,6 +4,7 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class KullaniciOturum : BaseEntity
 {
+    public string? OturumTokenHash { get; set; }
     public long KullaniciId { get; set; }
     public long CihazId { get; set; }
     public DateTime GirisTarihi { get; set; }

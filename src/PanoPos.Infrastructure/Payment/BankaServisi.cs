@@ -32,11 +32,11 @@ public sealed class BankaServisi : IBankaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Banka kodu bos olamaz.", "banka_kod_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = request.Kod.Trim();
-        var ayniKodVar = await _dbContext.Bankalar.AnyAsync(x => x.TenantId == sube.TenantId && x.SubeId == request.SubeId && x.Kod == kod, cancellationToken);
+        var ayniKodVar = await _dbContext.Bankalar.SubeKapsami(_dbContext).AnyAsync(x => x.TenantId == sube.TenantId && x.SubeId == request.SubeId && x.Kod == kod, cancellationToken);
         if (ayniKodVar)
         {
             throw new UygulamaHatasi(409, "Banka hatasi", "Ayni subede banka kodu tekrar edemez.", "banka_kod_duplicate");
@@ -72,13 +72,13 @@ public sealed class BankaServisi : IBankaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        var subeVar = await _dbContext.Subeler.AnyAsync(x => x.Id == subeId, cancellationToken);
+        var subeVar = await _dbContext.Subeler.YetkiliSube(_dbContext).AnyAsync(x => x.Id == subeId, cancellationToken);
         if (!subeVar)
         {
             throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
         }
 
-        return await _dbContext.Bankalar
+        return await _dbContext.Bankalar.SubeKapsami(_dbContext)
             .AsNoTracking()
             .Where(x => x.SubeId == subeId)
             .OrderBy(x => x.Ad)

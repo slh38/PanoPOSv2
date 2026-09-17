@@ -33,11 +33,12 @@ public sealed class BarkodServisi : IBarkodServisi
 
         var sql = @"SELECT b.Id, b.BarkodNo, b.BarkodTipi, b.StokKartId, b.StokKartVaryantId, u.Ad AS StokKartAd, uv.VaryantKodu
                     FROM Barkod b
-                    LEFT JOIN StokKart u ON u.Id = b.StokKartId AND u.SilindiMi = 0
-                    LEFT JOIN StokKartVaryant uv ON uv.Id = b.StokKartVaryantId AND uv.SilindiMi = 0
-                    WHERE b.SilindiMi = 0 AND b.BarkodNo = @BarkodNo;";
+                    LEFT JOIN StokKart u ON u.Id = b.StokKartId AND u.TenantId = b.TenantId AND u.SilindiMi = 0
+                    LEFT JOIN StokKartVaryant uv ON uv.Id = b.StokKartVaryantId AND uv.TenantId = b.TenantId AND uv.SilindiMi = 0
+                    WHERE b.SilindiMi = 0 AND b.BarkodNo = @BarkodNo
+                      AND (@TenantId IS NULL OR b.TenantId = @TenantId);";
 
-        return await connection.QuerySingleOrDefaultAsync<BarkodDto>(new CommandDefinition(sql, new { BarkodNo = barkodNo.Trim() }, cancellationToken: cancellationToken));
+        return await connection.QuerySingleOrDefaultAsync<BarkodDto>(new CommandDefinition(sql, new { BarkodNo = barkodNo.Trim(), TenantId = _dbContext.Baglam()?.TenantId }, cancellationToken: cancellationToken));
     }
 
     public Task<BarkodDto> BarkodGuncelleAsync(long id, BarkodOlusturRequestDto request, CancellationToken cancellationToken = default) => KaydetAsync(id, request, cancellationToken);
@@ -58,21 +59,21 @@ public sealed class BarkodServisi : IBarkodServisi
         long subeId;
         if (request.StokKartId.HasValue)
         {
-            var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId.Value, cancellationToken)
+            var stokKart = await _dbContext.StokKartler.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.StokKartId.Value, cancellationToken)
                 ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
             tenantId = stokKart.TenantId;
             subeId = stokKart.SubeId;
         }
         else
         {
-            var varyant = await _dbContext.StokKartVaryantlari.SingleOrDefaultAsync(x => x.Id == request.StokKartVaryantId!.Value, cancellationToken)
+            var varyant = await _dbContext.StokKartVaryantlari.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.StokKartVaryantId!.Value, cancellationToken)
                 ?? throw new UygulamaHatasi(404, "Varyant bulunamadi", "Varyant bulunamadi.", "variant_not_found");
             tenantId = varyant.TenantId;
             subeId = varyant.SubeId;
         }
 
         var barkodNo = request.BarkodNo.Trim();
-        var duplicate = await _dbContext.Barkodlar.AnyAsync(x => x.TenantId == tenantId && x.BarkodNo == barkodNo && (!id.HasValue || x.Id != id.Value), cancellationToken);
+        var duplicate = await _dbContext.Barkodlar.TenantKapsami(_dbContext).AnyAsync(x => x.TenantId == tenantId && x.BarkodNo == barkodNo && (!id.HasValue || x.Id != id.Value), cancellationToken);
         if (duplicate)
         {
             throw new UygulamaHatasi(409, "Barkod hatasi", "Ayni barkod iki kez eklenemez.", "barcode_duplicate");
@@ -81,7 +82,7 @@ public sealed class BarkodServisi : IBarkodServisi
         Barkod barkod;
         if (id.HasValue)
         {
-            barkod = await _dbContext.Barkodlar.SingleOrDefaultAsync(x => x.Id == id.Value, cancellationToken)
+            barkod = await _dbContext.Barkodlar.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id.Value, cancellationToken)
                 ?? throw new UygulamaHatasi(404, "Barkod bulunamadi", "Barkod bulunamadi.", "barcode_not_found");
         }
         else

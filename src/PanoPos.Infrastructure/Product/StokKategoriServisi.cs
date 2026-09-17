@@ -22,11 +22,11 @@ public sealed class StokKategoriServisi : IStokKategoriServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Kategori adi zorunludur.", "stok_kategori_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kod = NormalizeOptional(request.Kod);
-        if (kod is not null && await _dbContext.StokKategorileri.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
+        if (kod is not null && await _dbContext.StokKategorileri.TenantKapsami(_dbContext).AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
         {
             throw new UygulamaHatasi(409, "Kategori hatasi", "Ayni tenant icinde kategori kodu tekrar edemez.", "stok_kategori_duplicate");
         }
@@ -54,7 +54,7 @@ public sealed class StokKategoriServisi : IStokKategoriServisi
 
     public async Task<List<StokKategoriDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.StokKategorileri
+        return await _dbContext.StokKategorileri.TenantKapsami(_dbContext)
             .OrderBy(x => x.Ad)
             .Select(x => new StokKategoriDto
             {

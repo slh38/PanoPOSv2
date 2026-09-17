@@ -29,9 +29,15 @@ public sealed class TahsilatServisi : ITahsilatServisi
 
     public async Task<TahsilatDto> TahsilatOlusturAsync(TahsilatOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.Baglam() is { } context)
+        {
+            request.SubeId = IslemKapsami.Kimlik(request.SubeId, context.SubeId);
+            request.KullaniciId = IslemKapsami.Kimlik(request.KullaniciId, context.KullaniciId);
+            request.CihazId = IslemKapsami.Kimlik(request.CihazId, context.CihazId);
+        }
         ValidateRequest(request);
 
-        var fatura = await _dbContext.Faturalar.SingleOrDefaultAsync(x => x.Id == request.FaturaId, cancellationToken)
+        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.FaturaId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
 
         if (fatura.SubeId != request.SubeId)
@@ -58,13 +64,13 @@ public sealed class TahsilatServisi : ITahsilatServisi
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
         }
 
-        var kullaniciVar = await _dbContext.Kullanicilar.AnyAsync(x => x.Id == request.KullaniciId, cancellationToken);
+        var kullaniciVar = await _dbContext.Kullanicilar.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.KullaniciId, cancellationToken);
         if (!kullaniciVar)
         {
             throw new UygulamaHatasi(404, "Kullanici bulunamadi", "Kullanici bulunamadi.", "kullanici_not_found");
         }
 
-        var cihazVar = await _dbContext.Cihazlar.AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId, cancellationToken);
+        var cihazVar = await _dbContext.Cihazlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId, cancellationToken);
         if (!cihazVar)
         {
             throw new UygulamaHatasi(404, "Cihaz bulunamadi", "Cihaz bulunamadi.", "cihaz_not_found");
@@ -148,7 +154,7 @@ public sealed class TahsilatServisi : ITahsilatServisi
 
     public async Task<TahsilatDto> TahsilatGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var tahsilat = await _dbContext.Tahsilatlar
+        var tahsilat = await _dbContext.Tahsilatlar.SubeKapsami(_dbContext)
             .AsNoTracking()
             .Include(x => x.Fatura)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
@@ -185,7 +191,7 @@ public sealed class TahsilatServisi : ITahsilatServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler.Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext).Where(x => x.Id == subeId).Select(x => x.TenantId).SingleOrDefaultAsync(cancellationToken);
         if (tenantId == Guid.Empty)
         {
             throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
@@ -240,7 +246,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "Nakit tahsilatta KasaId zorunludur.", "cash_register_required");
         }
 
-        var kasaVar = await _dbContext.Kasalar.AnyAsync(x => x.Id == request.KasaId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var kasaVar = await _dbContext.Kasalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.KasaId.Value && x.SubeId == request.SubeId, cancellationToken);
         if (!kasaVar)
         {
             throw new UygulamaHatasi(404, "Kasa bulunamadi", "Kasa bulunamadi.", "kasa_not_found");
@@ -274,7 +280,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "Kredi karti tahsilatta BankaId zorunludur.", "bank_required");
         }
 
-        var bankaVar = await _dbContext.Bankalar.AnyAsync(x => x.Id == request.BankaId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var bankaVar = await _dbContext.Bankalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.BankaId.Value && x.SubeId == request.SubeId, cancellationToken);
         if (!bankaVar)
         {
             throw new UygulamaHatasi(404, "Banka bulunamadi", "Banka bulunamadi.", "bank_not_found");
@@ -307,7 +313,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Veresiye tahsilatta faturada CariId zorunludur.", "invoice_customer_required");
         }
 
-        var cariVar = await _dbContext.CariKartlar.AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var cariVar = await _dbContext.CariKartlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
         if (!cariVar)
         {
             throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
@@ -372,7 +378,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private async Task<decimal> FaturaTahsilatToplaminiHesaplaAsync(long faturaId, CancellationToken cancellationToken)
     {
-        var tahsilatlar = await _dbContext.Tahsilatlar
+        var tahsilatlar = await _dbContext.Tahsilatlar.SubeKapsami(_dbContext)
             .Where(x => x.FaturaId == faturaId && x.AktifMi)
             .Select(x => x.Tutar)
             .ToListAsync(cancellationToken);
@@ -410,7 +416,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
     private async Task<string> TahsilatFisNoUretAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var bugun = DateTime.UtcNow.ToString("yyyyMMdd");
-        var oncekiler = await _dbContext.Tahsilatlar
+        var oncekiler = await _dbContext.Tahsilatlar.TenantKapsami(_dbContext)
             .Where(x => x.TenantId == tenantId && x.TahsilatFisNo.StartsWith($"TAH-{bugun}-"))
             .Select(x => x.TahsilatFisNo)
             .ToListAsync(cancellationToken);

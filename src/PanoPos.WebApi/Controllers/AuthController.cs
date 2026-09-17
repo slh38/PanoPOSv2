@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using PanoPos.Application.Auth;
 
 namespace PanoPos.WebApi.Controllers;
@@ -15,6 +16,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto request, CancellationToken cancellationToken)
     {
@@ -24,9 +26,9 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Logout([FromBody] LogoutRequestDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout([FromServices] IIslemBaglami baglam, CancellationToken cancellationToken)
     {
-        await _authServisi.LogoutAsync(request.KullaniciOturumId, cancellationToken);
+        await _authServisi.LogoutAsync(baglam.KullaniciOturumId, cancellationToken);
         return NoContent();
     }
 }

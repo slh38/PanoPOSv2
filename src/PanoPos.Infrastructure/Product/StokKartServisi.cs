@@ -23,7 +23,7 @@ public sealed class StokKartServisi : IStokKartServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "stok_kart_ad_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         await StokKartKoduTekrarKontroluAsync(sube.TenantId, request.StokKartKodu, null, cancellationToken);
@@ -58,7 +58,7 @@ public sealed class StokKartServisi : IStokKartServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "stok_kart_ad_required");
         }
 
-        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var stokKart = await _dbContext.StokKartler.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         await StokKartKoduTekrarKontroluAsync(stokKart.TenantId, request.StokKartKodu, stokKart.Id, cancellationToken);
@@ -80,7 +80,7 @@ public sealed class StokKartServisi : IStokKartServisi
 
     public async Task<StokKartDto> StokKartDetayGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var stokKart = await _dbContext.StokKartler
+        var stokKart = await _dbContext.StokKartler.TenantKapsami(_dbContext)
             .Include(x => x.Kdv)
             .Include(x => x.StokKategori)
             .Include(x => x.StokGrup)
@@ -144,6 +144,7 @@ public sealed class StokKartServisi : IStokKartServisi
         var countSql = @"SELECT COUNT(1)
 FROM StokKart u
 WHERE u.SilindiMi = 0
+  AND (@TenantId IS NULL OR u.TenantId = @TenantId)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search);";
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
@@ -154,6 +155,7 @@ JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
 LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
 LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
 WHERE u.SilindiMi = 0
+  AND (@TenantId IS NULL OR u.TenantId = @TenantId)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search)
 ORDER BY u.Ad
 LIMIT @Take OFFSET @Skip;"
@@ -163,11 +165,12 @@ JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
 LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
 LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
 WHERE u.SilindiMi = 0
+  AND (@TenantId IS NULL OR u.TenantId = @TenantId)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search)
 ORDER BY u.Ad
 OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
-        var parameters = new { Search = pattern, Skip = (page - 1) * pageSize, Take = pageSize };
+        var parameters = new { TenantId = _dbContext.Baglam()?.TenantId, Search = pattern, Skip = (page - 1) * pageSize, Take = pageSize };
         var toplamKayit = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: cancellationToken));
         var kayitlar = (await connection.QueryAsync<StokKartListeItemDto>(new CommandDefinition(listSql, parameters, cancellationToken: cancellationToken))).ToList();
 
@@ -182,7 +185,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<StokKartVaryantDto> StokKartVaryantOlusturAsync(long stokKartId, StokKartVaryantOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
-        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == stokKartId, cancellationToken)
+        var stokKart = await _dbContext.StokKartler.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == stokKartId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         if (request.RenkId is null && request.BedenId is null)
@@ -195,17 +198,17 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz varyant", "VaryantKodu bos olamaz.", "variant_code_required");
         }
 
-        if (request.RenkId.HasValue && !await _dbContext.Renkler.AnyAsync(x => x.Id == request.RenkId.Value, cancellationToken))
+        if (request.RenkId.HasValue && !await _dbContext.Renkler.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.RenkId.Value, cancellationToken))
         {
             throw new UygulamaHatasi(404, "Renk bulunamadi", "Renk bulunamadi.", "renk_not_found");
         }
 
-        if (request.BedenId.HasValue && !await _dbContext.Bedenler.AnyAsync(x => x.Id == request.BedenId.Value, cancellationToken))
+        if (request.BedenId.HasValue && !await _dbContext.Bedenler.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.BedenId.Value, cancellationToken))
         {
             throw new UygulamaHatasi(404, "Beden bulunamadi", "Beden bulunamadi.", "beden_not_found");
         }
 
-        var ayniKombinasyonVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.StokKartId == stokKartId && x.RenkId == request.RenkId && x.BedenId == request.BedenId, cancellationToken);
+        var ayniKombinasyonVar = await _dbContext.StokKartVaryantlari.TenantKapsami(_dbContext).AnyAsync(x => x.StokKartId == stokKartId && x.RenkId == request.RenkId && x.BedenId == request.BedenId, cancellationToken);
         if (ayniKombinasyonVar)
         {
             throw new UygulamaHatasi(409, "Varyant hatasi", "Ayni urun altinda ayni varyant kombinasyonu tekrar edemez.", "variant_duplicate");
@@ -232,12 +235,12 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<List<StokKartVaryantDto>> StokKartVaryantlariGetirAsync(long stokKartId, CancellationToken cancellationToken = default)
     {
-        if (!await _dbContext.StokKartler.AnyAsync(x => x.Id == stokKartId, cancellationToken))
+        if (!await _dbContext.StokKartler.TenantKapsami(_dbContext).AnyAsync(x => x.Id == stokKartId, cancellationToken))
         {
             throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
         }
 
-        return await _dbContext.StokKartVaryantlari
+        return await _dbContext.StokKartVaryantlari.TenantKapsami(_dbContext)
             .Where(x => x.StokKartId == stokKartId)
             .Include(x => x.Renk)
             .Include(x => x.Beden)
@@ -264,7 +267,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             return;
         }
 
-        var exists = await _dbContext.StokKartler.AnyAsync(x => x.TenantId == tenantId && x.StokKartKodu == normalized && (!stokKartId.HasValue || x.Id != stokKartId.Value), cancellationToken);
+        var exists = await _dbContext.StokKartler.TenantKapsami(_dbContext).AnyAsync(x => x.TenantId == tenantId && x.StokKartKodu == normalized && (!stokKartId.HasValue || x.Id != stokKartId.Value), cancellationToken);
         if (exists)
         {
             throw new UygulamaHatasi(409, "StokKart hatasi", "Ayni tenant icinde StokKartKodu tekrar etmesin.", "stok_kart_kodu_duplicate");
@@ -273,12 +276,12 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private async Task KategoriVeGrupKontroluAsync(long? stokKategoriId, long? stokGrupId, CancellationToken cancellationToken)
     {
-        if (stokKategoriId.HasValue && !await _dbContext.StokKategorileri.AnyAsync(x => x.Id == stokKategoriId.Value, cancellationToken))
+        if (stokKategoriId.HasValue && !await _dbContext.StokKategorileri.TenantKapsami(_dbContext).AnyAsync(x => x.Id == stokKategoriId.Value, cancellationToken))
         {
             throw new UygulamaHatasi(404, "Kategori bulunamadi", "StokKart kategorisi bulunamadi.", "stok_kategori_not_found");
         }
 
-        if (stokGrupId.HasValue && !await _dbContext.StokGruplari.AnyAsync(x => x.Id == stokGrupId.Value, cancellationToken))
+        if (stokGrupId.HasValue && !await _dbContext.StokGruplari.TenantKapsami(_dbContext).AnyAsync(x => x.Id == stokGrupId.Value, cancellationToken))
         {
             throw new UygulamaHatasi(404, "Grup bulunamadi", "StokKart grubu bulunamadi.", "stok_grup_not_found");
         }
@@ -287,7 +290,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private async Task KdvKontroluAsync(long id, Guid tenant, CancellationToken ct)
     {
-        if (!await _dbContext.Kdvler.AnyAsync(x => x.Id == id && x.TenantId == tenant && x.AktifMi, ct))
+        if (!await _dbContext.Kdvler.TenantKapsami(_dbContext).AnyAsync(x => x.Id == id && x.TenantId == tenant && x.AktifMi, ct))
             throw new UygulamaHatasi(400, "Gecersiz KDV", "Ayni tenant icinde aktif KDV secilmelidir.", "kdv_invalid");
     }
 }

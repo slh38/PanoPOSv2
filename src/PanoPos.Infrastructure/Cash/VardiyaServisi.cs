@@ -18,21 +18,26 @@ public sealed class VardiyaServisi : IVardiyaServisi
 
     public async Task<VardiyaResponseDto> VardiyaAcAsync(long kullaniciId, long cihazId, long kasaId, decimal acilisNakit, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.Baglam() is { } context)
+        {
+            kullaniciId = IslemKapsami.Kimlik(kullaniciId, context.KullaniciId);
+            cihazId = IslemKapsami.Kimlik(cihazId, context.CihazId);
+        }
         if (kullaniciId <= 0 || cihazId <= 0 || kasaId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "KullaniciId, CihazId ve KasaId zorunludur.", "vardiya_open_invalid_request");
         }
 
-        var cihaz = await _dbContext.Cihazlar.SingleOrDefaultAsync(x => x.Id == cihazId, cancellationToken)
+        var cihaz = await _dbContext.Cihazlar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == cihazId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Cihaz bulunamadi", "Cihaz bulunamadi.", "cihaz_not_found");
 
-        var kasa = await _dbContext.Kasalar.SingleOrDefaultAsync(x => x.Id == kasaId, cancellationToken)
+        var kasa = await _dbContext.Kasalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == kasaId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Kasa bulunamadi", "Kasa bulunamadi.", "kasa_not_found");
 
-        var kullanici = await _dbContext.Kullanicilar.SingleOrDefaultAsync(x => x.Id == kullaniciId, cancellationToken)
+        var kullanici = await _dbContext.Kullanicilar.TenantKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == kullaniciId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Kullanici bulunamadi", "Kullanici bulunamadi.", "kullanici_not_found");
 
-        var aktifOturumVar = await _dbContext.KullaniciOturumlari
+        var aktifOturumVar = await _dbContext.KullaniciOturumlari.SubeKapsami(_dbContext)
             .AnyAsync(x => x.KullaniciId == kullaniciId && x.CihazId == cihazId && x.AktifMi && x.CikisTarihi == null, cancellationToken);
 
         if (!aktifOturumVar)
@@ -40,7 +45,7 @@ public sealed class VardiyaServisi : IVardiyaServisi
             throw new UygulamaHatasi(403, "Vardiya acilamadi", "Kullanicinin aktif oturumu yok.", "aktif_oturum_required");
         }
 
-        var cihazdaAktifVardiyaVar = await _dbContext.Vardiyalar
+        var cihazdaAktifVardiyaVar = await _dbContext.Vardiyalar.SubeKapsami(_dbContext)
             .AnyAsync(x => x.CihazId == cihazId && x.AktifMi, cancellationToken);
 
         if (cihazdaAktifVardiyaVar)
@@ -48,7 +53,7 @@ public sealed class VardiyaServisi : IVardiyaServisi
             throw new UygulamaHatasi(409, "Vardiya acilamadi", "Ayni cihazda aktif vardiya zaten var.", "aktif_vardiya_device_exists");
         }
 
-        var kasadaAktifVardiyaVar = await _dbContext.Vardiyalar
+        var kasadaAktifVardiyaVar = await _dbContext.Vardiyalar.SubeKapsami(_dbContext)
             .AnyAsync(x => x.KasaId == kasaId && x.AktifMi, cancellationToken);
 
         if (kasadaAktifVardiyaVar)
@@ -103,7 +108,7 @@ public sealed class VardiyaServisi : IVardiyaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "VardiyaId zorunludur.", "vardiya_id_required");
         }
 
-        var vardiya = await _dbContext.Vardiyalar
+        var vardiya = await _dbContext.Vardiyalar.SubeKapsami(_dbContext)
             .Include(x => x.KasaHareketleri.Where(y => y.AktifMi))
             .SingleOrDefaultAsync(x => x.Id == vardiyaId, cancellationToken);
 
@@ -167,12 +172,14 @@ public sealed class VardiyaServisi : IVardiyaServisi
 
     public async Task<VardiyaResponseDto?> AktifVardiyaGetirAsync(long cihazId, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.Baglam() is { } context)
+            cihazId = IslemKapsami.Kimlik(cihazId, context.CihazId);
         if (cihazId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "CihazId zorunludur.", "cihaz_required");
         }
 
-        var vardiya = await _dbContext.Vardiyalar
+        var vardiya = await _dbContext.Vardiyalar.SubeKapsami(_dbContext)
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.CihazId == cihazId && x.AktifMi, cancellationToken);
 

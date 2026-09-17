@@ -1,4 +1,5 @@
 using Dapper;
+using PanoPos.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PanoPos.Application.Common;
@@ -11,7 +12,7 @@ public sealed partial class StokServisi
     public async Task<StokFisDto> GetByIdAsync(long id, long subeId, CancellationToken ct = default)
     {
         var tenant = await TenantAsync(subeId, ct);
-        var fis = await db.StokFisleri.AsNoTracking().Include(x => x.Detaylar)
+        var fis = await db.StokFisleri.SubeKapsami(db).AsNoTracking().Include(x => x.Detaylar)
             .SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant && x.SubeId == subeId, ct)
             ?? throw new UygulamaHatasi(404, "Stok fisi bulunamadi", "Bu subede stok fisi bulunamadi.", "stock_not_found");
         return Map(fis);
@@ -30,7 +31,7 @@ public sealed partial class StokServisi
         if ((db.Database.ProviderName ?? "").Contains("Sqlite"))
         {
             // SQLite SUM uses binary floats. Sum only the scoped quantities as decimal for exact test semantics.
-            var quantities = await db.StokHareketleri.AsNoTracking().Where(x =>
+            var quantities = await db.StokHareketleri.SubeKapsami(db).AsNoTracking().Where(x =>
                 x.TenantId == tenant && x.SubeId == subeId && x.DepoId == depoId &&
                 x.StokKartId == stockId && x.StokKartVaryantId == variantId).Select(x => x.Miktar).ToListAsync(ct);
             return quantities.Sum();

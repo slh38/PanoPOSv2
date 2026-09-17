@@ -43,6 +43,10 @@ public sealed class AuthServisi : IAuthServisi
             throw new UygulamaHatasi(400, "Giris basarisiz", "Cihaz aktif degil veya bulunamadi.", "cihaz_invalid");
         }
 
+        if (!await _dbContext.Tenantler.AnyAsync(x => x.TenantId == cihaz.TenantId && x.AktifMi, cancellationToken) ||
+            !await _dbContext.Subeler.AnyAsync(x => x.Id == cihaz.SubeId && x.TenantId == cihaz.TenantId && x.AktifMi, cancellationToken))
+            throw new UygulamaHatasi(401, "Giris basarisiz", "Cihaz tenant/sube baglantisi gecersiz.", "session_invalid");
+
         var adayKullanicilar = await _dbContext.Kullanicilar
             .Where(x => x.TenantId == cihaz.TenantId)
             .ToListAsync(cancellationToken);
@@ -84,7 +88,7 @@ public sealed class AuthServisi : IAuthServisi
             .SingleAsync(x => x.Id == eslesenKullanici.Id, cancellationToken);
 
         var yetkiliSubeler = kullanici.KullaniciSubeler
-            .Where(x => x.Sube.AktifMi)
+            .Where(x => x.TenantId == kullanici.TenantId && x.Sube.TenantId == kullanici.TenantId && x.Sube.AktifMi)
             .Select(x => x.Sube)
             .DistinctBy(x => x.Id)
             .ToList();
@@ -114,8 +118,10 @@ public sealed class AuthServisi : IAuthServisi
             aktifOturum.AktifMi = false;
         }
 
+        var token = OturumToken.Uret();
         var yeniOturum = new KullaniciOturum
         {
+            OturumTokenHash = OturumToken.Hash(token),
             TenantId = kullanici.TenantId,
             SubeId = cihaz.SubeId,
             KullaniciId = kullanici.Id,
@@ -136,6 +142,9 @@ public sealed class AuthServisi : IAuthServisi
 
         return new LoginResponseDto
         {
+            OturumToken = token,
+            TenantId = kullanici.TenantId,
+            SubeId = cihaz.SubeId,
             KullaniciId = kullanici.Id,
             AdSoyad = $"{kullanici.Ad} {kullanici.Soyad}".Trim(),
             VarsayilanSubeId = cihaz.SubeId,
@@ -160,6 +169,8 @@ public sealed class AuthServisi : IAuthServisi
 
     public async Task LogoutAsync(long kullaniciOturumId, CancellationToken cancellationToken = default)
     {
+        if (_dbContext.IslemBaglami is { Dogrulandi: true } context)
+            kullaniciOturumId = IslemKapsami.Kimlik(kullaniciOturumId, context.KullaniciOturumId);
         if (kullaniciOturumId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "KullaniciOturumId zorunludur.", "oturum_required");

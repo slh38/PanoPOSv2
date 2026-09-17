@@ -17,7 +17,7 @@ public sealed class KasaServisi : IKasaServisi
 
     public async Task<List<KasaDto>> ListeleAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Kasalar
+        return await _dbContext.Kasalar.SubeKapsami(_dbContext)
             .OrderBy(x => x.Ad)
             .Select(x => new KasaDto
             {
@@ -41,7 +41,7 @@ public sealed class KasaServisi : IKasaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
+        var sube = await _dbContext.Subeler.YetkiliSube(_dbContext).SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         var kasa = new Kasa

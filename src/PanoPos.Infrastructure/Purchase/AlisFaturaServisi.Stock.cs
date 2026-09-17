@@ -1,4 +1,5 @@
 using Dapper;
+using PanoPos.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PanoPos.Domain.Entities;
@@ -12,7 +13,7 @@ public sealed partial class AlisFaturaServisi
 {
     private async Task ValidateDepoAsync(Guid tenantId, long subeId, long depoId, CancellationToken ct)
     {
-        if (depoId <= 0 || !await db.Depolar.AnyAsync(x =>
+        if (depoId <= 0 || !await db.Depolar.SubeKapsami(db).AnyAsync(x =>
             x.Id == depoId && x.TenantId == tenantId && x.SubeId == subeId && x.AktifMi, ct))
             throw Error("Ayni tenant ve sube icinde aktif, silinmemis DepoId zorunludur.");
     }
@@ -47,11 +48,11 @@ public sealed partial class AlisFaturaServisi
                 string.IsNullOrWhiteSpace(line.BirimKodu) || string.IsNullOrWhiteSpace(line.BirimAdi))
                 throw Error("Alis satirinin miktar, katsayi veya birim snapshot bilgisi gecersiz.");
             _ = StokServisi.ToBaseQuantity(line.Miktar, line.Katsayi);
-            if (!await db.StokKartler.AnyAsync(x => x.Id == line.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct) ||
-                !await db.StokKartSatisBirimleri.AnyAsync(x => x.Id == line.StokKartSatisBirimiId &&
+            if (!await db.StokKartler.TenantKapsami(db).AnyAsync(x => x.Id == line.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct) ||
+                !await db.StokKartSatisBirimleri.TenantKapsami(db).AnyAsync(x => x.Id == line.StokKartSatisBirimiId &&
                     x.StokKartId == line.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct))
                 throw Error("Alis satirinin stok karti veya satis birimi gecersiz.");
-            if (line.StokKartVaryantId.HasValue && !await db.StokKartVaryantlari.AnyAsync(x =>
+            if (line.StokKartVaryantId.HasValue && !await db.StokKartVaryantlari.TenantKapsami(db).AnyAsync(x =>
                 x.Id == line.StokKartVaryantId && x.StokKartId == line.StokKartId && x.TenantId == f.TenantId && x.AktifMi, ct))
                 throw Error("Alis satirinin varyanti gecersiz.");
 

@@ -2057,7 +2057,8 @@ Stok çekirdeği endpointleri:
 - GET /api/v1/stok/miktar?subeId=...&depoId=...&stokKartId=...&stokKartVaryantId=...
 
 Fiş listesi ayrıca StokFisTipi, DepoId ve Arama filtrelerini destekler.
-Tenant mevcut proje yaklaşımıyla SubeId üzerinden çözülür; bağlı
+Tenant ve aktif şube doğrulanmış IIslemBaglami ile sınırlandırılır;
+eski SubeId parametreleri oturumla uyuşmak zorundadır. Bağlı
 stok/varyant/birim/depo ilişkileri bu kapsama göre doğrulanır.
 FisNo verilmezse mevcut tarih/sıra yaklaşımıyla STK-yyyyMMdd-000001
 biçiminde üretilir; verilirse Tenant içinde tekrar kullanılamaz.
@@ -2352,3 +2353,72 @@ Refactor öncesi ve sonrası 301/301 test başarılıdır. Solution build başar
 mevcut Desktop WindowsBase uyarısı devam etmektedir. Swagger sözleşmesi ve
 SQL Server üzerindeki yeni Dapper liste çağrısı doğrulanmıştır. Desktop,
 appsettings.json ve CODEX_RULES.md bu görevde değiştirilmemiştir.
+
+---
+
+# 88. MERKEZİ OTURUM VE İŞLEM BAĞLAMI (17 EYLÜL 2026)
+
+PIN login 32 kriptografik rastgele byte (256-bit) opaque OturumToken üretir.
+Token yalnız login cevabında döner; KullaniciOturum.OturumTokenHash alanında
+SHA-256 hash saklanır. Hash nullable ve unique filtered indexlidir; eski
+hashsiz oturumlar API kimlik doğrulamasında kullanılamaz, yeniden login gerekir.
+Sıralı OturumId bir authentication secret değildir. JWT, Identity, refresh
+token veya sliding expiration sistemi eklenmemiştir.
+
+POST /api/v1/auth/login public kalır. Cevap OturumToken, TenantId, SubeId,
+KullaniciId ve CihazId yanında eski AdSoyad, Roller, Subeler, OturumId ve
+VarsayilanSubeId alanlarını korur. Sonraki istekler Authorization: Bearer
+<OturumToken> başlığını gönderir. POST /api/v1/auth/logout body gerektirmez;
+yalnız aktif tokenın oturumunu kapatır. Logout veya yeni login ile kapanmış
+eski oturum tokenı tekrar kullanılamaz. Başka oturumun Id'sini göndermek
+o oturumu kapatmaz.
+
+OturumMiddleware MVC ticari endpointlerini varsayılan olarak korur;
+AllowAnonymous yalnız login ve mevcut system health/info uçlarında kullanılır.
+Her korunan istekte session, kullanıcı, tenant, şube, cihaz ve KullaniciSube
+yetkisi veritabanından doğrulanır. Pasif/silinmiş/kilitli kullanıcı, pasif
+tenant/şube/cihaz veya bozulmuş ilişkiler erişimi durdurur. KullaniciSube
+yetkisi BagliSubeId üzerinden kontrol edilir. Geçersiz/eksik/logout token 401,
+başka bağlam seçme isteği 403, kapsam dışında kalan kayıtlar mevcut güvenli
+not-found/ilişki doğrulama hatalarını üretir. ProblemDetails standardı korunur.
+
+Scoped IIslemBaglami; TenantId, SubeId, KullaniciId, CihazId ve
+KullaniciOturumId sağlar. Değerler DTO'dan değil doğrulanmış session'dan gelir.
+IslemBaglamiFiltresi eski DTO/query bağlam alanlarını uyumluluk için korur:
+eksik/sıfır kimlikleri session'dan doldurur, farklı kimliği reddeder.
+Bu filtre FK yetkilendirmesinin yerine geçmez.
+
+EF servis sorgularında açık TenantKapsami/SubeKapsami/YetkiliSube kullanılır;
+karmaşık global tenant filtresi eklenmemiştir. Stok kartı, barkod, fiyat,
+birim, kategori/grup ve KDV gibi master kayıtlar tenant kapsamında kalır.
+Ticari belge, depo, kasa, mevcut şube bazlı banka ve stok işlemleri aktif
+şubeyle sınırlıdır. Okuma ve FK doğrulamaları aynı kapsamı kullanır.
+Belge numarası ve tenant-geneli unique kontrolü gibi yalnız servis içi
+kontroller kendi tenant-geneli kapsamını korur; başka şube belge verisi
+client'a açılmaz. Dapper stok kartı/barkod sorgularında açık tenant koşulu
+vardır; şube bazlı Dapper sorgularının şubesi de oturumla doğrulanır.
+Aynı barkod farklı tenantlarda bulunabilir; mevcut barkod unique indexi
+değişmemiştir. DbContext'in bağlamsız oluşturulması yalnız mevcut standalone
+regresyon fixture'ları/design-time kullanımını korur; HTTP DI her zaman
+scoped bağlam verir, doğrulanmamış bağlam ticari servis sorgusunda reddedilir.
+
+Fatura Outbox cihazı artık gerçek session CihazId değeridir. Kritik
+IslemLog/Outbox kayıtları tenant/şube/kullanıcı/cihaz bilgilerini bağlamdan
+alır; oluşturma/güncelleme/silme audit alanları session kullanıcısıyla yazılır.
+Login audit'i henüz session doğrulanmadan AuthServisi'nin doğruladığı kayıtları
+kullanır. Vardiya zorunlu yapılmamış, tahsilat-vardiya bağlantısı eklenmemiştir.
+
+Migration: 20260917122354_AddOpaqueSessionContext. PanoPosDb üzerine uygulandı;
+veritabanı silinmedi, tarihsel migrationlar değiştirilmedi. SQL Server
+bağlantısı mevcut TLS 1.0 uyarısını üretmektedir; sunucu TLS güncellemesi bu
+görevde yapılmamıştır.
+
+Mevcut 301 test ve 60 yeni SQLite in-memory/gerçek HTTP integration testi:
+361/361 başarılı. PIN -> Bearer -> korunan API -> doğrulanmış context,
+tenant/şube/FK izolasyonu, logout, stok ve parçalı ödeme/audit/outbox doğrulandı.
+Solution build başarılı; mevcut Desktop WindowsBase uyarısı devam eder.
+Desktop, appsettings.json ve CODEX_RULES.md korunmuştur. Commit/push yapılmadı.
+
+Barkod-birim-fiyat lookup, döviz dönüşümü, bekleyen sipariş düzenleme,
+ödeme concurrency/idempotency, FaturaKapat davranışı, fiş response ve
+tahsilat-vardiya entegrasyonu bilinçli olarak sonraki görevlere bırakılmıştır.

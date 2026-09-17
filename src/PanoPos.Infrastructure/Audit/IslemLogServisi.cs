@@ -18,6 +18,14 @@ public sealed class IslemLogServisi : IIslemLogServisi
 
     public async Task<IslemLogDto> LogEkleAsync(IslemLogEkleRequestDto request, CancellationToken cancellationToken = default)
     {
+        // Login audit runs before a request context exists; its source is AuthServisi.
+        if (_dbContext.IslemBaglami is { Dogrulandi: true } context)
+        {
+            request.TenantId = context.TenantId;
+            request.SubeId = context.SubeId;
+            request.CihazId = context.CihazId;
+            request.KullaniciId = context.KullaniciId;
+        }
         if (request.TenantId == Guid.Empty)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "TenantId zorunludur.", "tenant_required");
@@ -77,7 +85,7 @@ public sealed class IslemLogServisi : IIslemLogServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
 
-        var tenantId = await _dbContext.Subeler
+        var tenantId = await _dbContext.Subeler.YetkiliSube(_dbContext)
             .Where(x => x.Id == request.SubeId)
             .Select(x => x.TenantId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -147,7 +155,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<IslemLogDto> DetayGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var log = await _dbContext.IslemLoglari.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var log = await _dbContext.IslemLoglari.SubeKapsami(_dbContext).AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Islem log bulunamadi", "Islem log bulunamadi.", "audit_log_not_found");
 
         return MapDto(log);

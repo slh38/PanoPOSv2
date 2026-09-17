@@ -19,7 +19,7 @@ public sealed class StokMaliyetServisi(PanoPosDbContext db) : IStokMaliyetServis
     {
         RequireTransaction();
         if (f.Durum != AlisFaturaDurumu.Taslak ||
-            await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct))
+            await db.StokFisleri.SubeKapsami(db).IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct))
             throw Error("Maliyet yalniz ilk alis kesinlestirmesinde guncellenebilir.");
         var currency = f.ParaBirimKodu.Trim().ToUpperInvariant();
         var rate = currency == AnaParaBirimi ? 1m : f.Kur;
@@ -118,7 +118,7 @@ public sealed class StokMaliyetServisi(PanoPosDbContext db) : IStokMaliyetServis
             await db.Database.GetDbConnection().ExecuteScalarAsync<long>(new CommandDefinition(
                 "SELECT Id FROM Tenant WITH (UPDLOCK,HOLDLOCK) WHERE TenantId=@TenantId",
                 new { TenantId = tenant }, tx.GetDbTransaction(), cancellationToken: ct));
-        var settings = await db.TenantAyarlari.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.TenantId == tenant, ct);
+        var settings = await db.TenantAyarlari.TenantKapsami(db).IgnoreQueryFilters().SingleOrDefaultAsync(x => x.TenantId == tenant, ct);
         if (settings?.SilindiMi == true) throw Error("Tenant ayari silinmis.");
         if (settings == null)
         {
@@ -132,12 +132,12 @@ public sealed class StokMaliyetServisi(PanoPosDbContext db) : IStokMaliyetServis
     }
 
     private IQueryable<StokMaliyet> CostQuery(Guid tenant, long sube, long depo, long stock, long? variant) =>
-        db.StokMaliyetleri.Where(x => x.TenantId == tenant && x.SubeId == sube && x.DepoId == depo &&
+        db.StokMaliyetleri.SubeKapsami(db).Where(x => x.TenantId == tenant && x.SubeId == sube && x.DepoId == depo &&
             x.StokKartId == stock && x.StokKartVaryantId == variant);
 
     private async Task<MaliyetYontemi> MethodAsync(Guid tenant, CancellationToken ct)
     {
-        var method = await db.TenantAyarlari.Where(x => x.TenantId == tenant)
+        var method = await db.TenantAyarlari.TenantKapsami(db).Where(x => x.TenantId == tenant)
             .Select(x => (MaliyetYontemi?)x.MaliyetYontemi).SingleOrDefaultAsync(ct) ?? MaliyetYontemi.AgirlikliOrtalama;
         ValidateMethod(method);
         return method;
@@ -167,19 +167,19 @@ public sealed class StokMaliyetServisi(PanoPosDbContext db) : IStokMaliyetServis
 
     private async Task<Guid> TenantAsync(long sube, CancellationToken ct)
     {
-        var tenant = (await db.Subeler.AsNoTracking().SingleOrDefaultAsync(x => x.Id == sube && x.AktifMi, ct)
+        var tenant = (await db.Subeler.YetkiliSube(db).AsNoTracking().SingleOrDefaultAsync(x => x.Id == sube && x.AktifMi, ct)
             ?? throw Error("Aktif sube bulunamadi.")).TenantId;
-        if (!await db.Tenantler.AnyAsync(x => x.TenantId == tenant && x.AktifMi, ct))
+        if (!await db.Tenantler.TenantKapsami(db).AnyAsync(x => x.TenantId == tenant && x.AktifMi, ct))
             throw Error("Aktif tenant bulunamadi.");
         return tenant;
     }
 
     private async Task ValidateKeyAsync(Guid tenant, long sube, long depo, long stock, long? variant, CancellationToken ct)
     {
-        if (!await db.Depolar.AnyAsync(x => x.Id == depo && x.TenantId == tenant && x.SubeId == sube && x.AktifMi, ct) ||
-            !await db.StokKartler.AnyAsync(x => x.Id == stock && x.TenantId == tenant && x.AktifMi, ct))
+        if (!await db.Depolar.SubeKapsami(db).AnyAsync(x => x.Id == depo && x.TenantId == tenant && x.SubeId == sube && x.AktifMi, ct) ||
+            !await db.StokKartler.TenantKapsami(db).AnyAsync(x => x.Id == stock && x.TenantId == tenant && x.AktifMi, ct))
             throw Error("Depo/stok tenant ve sube kapsami gecersiz.");
-        if (variant.HasValue && !await db.StokKartVaryantlari.AnyAsync(x =>
+        if (variant.HasValue && !await db.StokKartVaryantlari.TenantKapsami(db).AnyAsync(x =>
             x.Id == variant && x.StokKartId == stock && x.TenantId == tenant && x.AktifMi, ct))
             throw Error("Varyant stok kartina/tenant'a ait degil.");
     }
@@ -197,7 +197,7 @@ public sealed class StokMaliyetServisi(PanoPosDbContext db) : IStokMaliyetServis
     private async Task<decimal> OldQuantityAsync(Guid tenant, long sube, long depo, long stock, long? variant, CancellationToken ct)
     {
         if (!db.Database.IsSqlServer())
-            return (await db.StokHareketleri.Where(x => x.TenantId == tenant && x.SubeId == sube &&
+            return (await db.StokHareketleri.SubeKapsami(db).Where(x => x.TenantId == tenant && x.SubeId == sube &&
                 x.DepoId == depo && x.StokKartId == stock && x.StokKartVaryantId == variant).Select(x => x.Miktar).ToListAsync(ct)).Sum();
         var sql = "SELECT COALESCE(SUM(Miktar),0) FROM StokHareket WITH (UPDLOCK,HOLDLOCK) WHERE TenantId=@TenantId AND SubeId=@SubeId AND DepoId=@DepoId AND StokKartId=@StokKartId AND " +
             (variant.HasValue ? "StokKartVaryantId=@VariantId" : "StokKartVaryantId IS NULL");

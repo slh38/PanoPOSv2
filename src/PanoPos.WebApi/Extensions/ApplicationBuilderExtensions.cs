@@ -11,6 +11,8 @@ public static class ApplicationBuilderExtensions
         app.UseSerilogRequestLogging();
         app.UseSwagger();
         app.UseSwaggerUI();
+        app.UseRouting();
+        app.UseMiddleware<PanoPos.WebApi.Authentication.OturumMiddleware>();
         app.UseAuthorization();
         app.MapControllers();
 
