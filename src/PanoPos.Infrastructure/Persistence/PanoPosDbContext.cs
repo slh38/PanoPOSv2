@@ -115,6 +115,14 @@ public sealed class PanoPosDbContext : DbContext
     private void ApplyEntityRules()
     {
         var utcNow = DateTime.UtcNow;
+        // Legacy line writes must also invalidate a reopened POS cart.
+        var changedOrders = ChangeTracker.Entries<SiparisDetay>()
+            .Where(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(x => x.Entity.SiparisId).ToHashSet();
+        foreach (var entry in ChangeTracker.Entries<Siparis>().Where(x =>
+                     x.Entity.SiparisTipi == Domain.Enums.SiparisTipi.HizliSatisBekleyen &&
+                     (x.State is EntityState.Added or EntityState.Modified || changedOrders.Contains(x.Entity.Id))))
+            entry.Entity.Surum = Guid.NewGuid();
         if (IslemBaglami is { Dogrulandi: true } context)
         {
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())

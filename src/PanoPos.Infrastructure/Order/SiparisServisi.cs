@@ -12,7 +12,7 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Order;
 
-public sealed class SiparisServisi : ISiparisServisi
+public sealed partial class SiparisServisi : ISiparisServisi
 {
     private readonly PanoPosDbContext _dbContext;
     private readonly IOutboxServisi _outboxServisi;
@@ -196,7 +196,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
     public async Task<SiparisDto> SiparisGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext)
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).AsNoTracking()
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
             .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
@@ -205,6 +205,7 @@ public sealed class SiparisServisi : ISiparisServisi
         return new SiparisDto
         {
             Id = siparis.Id,
+            FiyatTipiId = siparis.FiyatTipiId, Surum = siparis.Surum,
             SiparisNo = siparis.SiparisNo,
             SiparisTipi = siparis.SiparisTipi,
             AdisyonId = siparis.AdisyonId,

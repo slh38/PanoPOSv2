@@ -10,6 +10,8 @@ public sealed class SiparisConfiguration : IEntityTypeConfiguration<Siparis>
     {
         builder.ToTable("Siparis");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.Property(x => x.Surum).IsConcurrencyToken();
+        builder.HasOne<FiyatTipi>().WithMany().HasForeignKey(x => x.FiyatTipiId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.ToplamMatrah).HasPrecision(18, 2);
         builder.Property(x => x.ToplamKdv).HasPrecision(18, 2);
 

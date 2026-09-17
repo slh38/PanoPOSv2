@@ -2521,3 +2521,77 @@ Kesilen test maddelerinin doğrulama özeti:
 fiş response, Tahsilat/Vardiya, manuel fiyat yetkisi ve otomatik kur servisi
 bilinçli olarak kapsam dışıdır. Kullanıcı dosyaları korunmuştur;
 bu doğrulama çalışmasında commit/push yapılmamıştır.
+
+---
+
+# 90. HIZLI SATIŞ LOCAL SEPET / BEKLET / TOPLU KAYIT
+
+Hızlı Satış yeni sepeti client belleğinde tutar. Barkod veya manuel fiyat
+lookup kalıcı Siparis oluşturmaz. Her grid değişikliği backend'e yazılmaz.
+Beklet tek istekle Siparis + SiparisDetay oluşturur. Doğrudan ödeme için
+aynı toplu kayıt işlemi ardından mevcut Siparis -> Fatura -> Tahsilat
+akışı kullanılır. Restaurant gerçek zamanlı Siparis yaklaşımını korur.
+Bu görev Desktop implementasyonu içermez.
+
+Yeni endpointler (Bearer ve doğrulanmış Tenant/Sube zorunlu):
+
+- POST /api/v1/hizli-satis/beklet
+- POST /api/v1/hizli-satis/siparis: hiç bekletilmemiş local sepetten ödeme
+  öncesi sipariş oluşturmak için aynı toplu kayıt contractı.
+- GET /api/v1/hizli-satis/bekleyen?arama=...&page=1&pageSize=50
+- GET /api/v1/hizli-satis/bekleyen/{id}
+- PUT /api/v1/hizli-satis/bekleyen/{id}
+
+İptal için mevcut POST /api/v1/siparis/{id}/iptal kullanılır; ikinci iptal
+motoru/endpointi yoktur. Faturaya geçiş mevcut
+POST /api/v1/fatura/olustur-siparisten ile yapılır. Beklet ve iptal stok,
+fatura veya tahsilat üretmez. Fatura yalnız kayıtlı son siparişten mevcut
+tek stok çıkışı ve fiyat/kur/KDV snapshotlarını üretir.
+
+Toplu istek: CariId, zorunlu FiyatTipiId, BelgeParaBirimKodu, Kur,
+GenelIndirimOrani veya GenelIndirimTutari, Aciklama ve 1-500 Satirlar.
+Satır: StokKartSatisBirimiId, opsiyonel StokKartVaryantId/FiyatTipiId,
+Miktar, gereken FiyatKur, IndirimOrani veya IndirimTutari.
+Kaydedilmiş satır güncellenirken SiparisDetayId gönderilir; yeni satırda
+boş bırakılır. Eksik satırlar soft delete edilir. Başka siparişin satırı
+ve tekrarlı satır kimlikleri reddedilir. Request fiyat/toplam/KDV sonucu
+alanları içermez; JSON ile fazladan gönderilseler bile kullanılmazlar.
+
+Geri açma SiparisDto ile birim, katsayı, fiyat tipi, fiyat para birimi,
+kur, KDV ve iskonto snapshotlarını döndürür; fiyat yeniden çözülmez.
+Header FiyatTipiId ve Surum içerir. Detaylarda mevcut StokKartAd ve
+VaryantKodu gösterim alanları kullanılır. Liste Dapper ile açık kolon,
+tenant/şube/soft-delete/tip/durum filtreleri ve 1-200 pageSize kullanır;
+arama sipariş no, açıklama ve cari adındadır.
+
+Fiyat politikası açıkça TÜM SEPETİ YENİDEN FİYATLAMA olarak seçilmiştir.
+PUT, değişmemiş satırlar dahil güncel aktif master fiyat ve KDV oranını
+doğrular. Sadece GET eski snapshotı korur. Client PUT cevabındaki yeni
+toplamları göstermeli ve ödeme öncesinde bunları esas almalıdır.
+Siparişin kayıtlı KdvDahilMi tercihi korunur. Genel/satır iskontoları
+mevcut VergiHesaplamaServisi ile hesaplanır. Dövizde önceki görevdeki
+FiyatKur sözleşmesi korunur; otomatik kur veya manuel fiyat eklenmemiştir.
+
+Eşzamanlılık: Siparis.Surum uygulama tarafından yenilenen Guid EF
+concurrency tokenıdır. SQL Server ve SQLite aynı davranışı paylaşır;
+ayrı rowversion emülasyonu gerekmez. PUT son GET/kayıt cevabının Surum
+değerini zorunlu gönderir. Eski/eksik sürüm 409 cart_version_conflict
+üretir. SQL Server toplu update aynı sipariş satırında UPDLOCK/HOLDLOCK
+kullanır; faturalaştırma kilidiyle uyumludur. Legacy satır API'si ve iptal
+de hızlı satış sürümünü geçersiz kılar. EF concurrency hataları merkezi
+ProblemDetails üzerinden 409 döner. Transaction hatasında sepet kaydı
+tamamen geri alınır; eski ekran sessizce yeni kaydı ezemez.
+
+Migration: 20260917150630_AddQuickSaleCartVersion. Yalnız Siparis header
+FiyatTipiId FK/index ve Surum alanları eklendi. PanoPosDb database update
+başarılı; önceki migrationlar ve kullanıcı ayarları değişmedi. EF modelinde
+bekleyen schema değişikliği yok. Mevcut SQL Server TLS 1.0 uyarısı sürer.
+
+431 mevcut + 43 yeni SQLite/HTTP test: 474/474 başarılı, atlanan test yok.
+Rollback, toplu uzlaştırma, iskonto, döviz, fiyat manipülasyonu, tenant/şube,
+pasif master, iki DbContext sürüm çatışması, Swagger ve faturaya geçiş
+doğrulandı. Solution build 0 hata, mevcut 1 Desktop WindowsBase uyarısı ile
+başarılıdır. SQL Server üzerinde çok terminalli yük testi yapılmamıştır.
+Desktop, appsettings.json ve CODEX_RULES.md korunmuştur. Commit/push yoktur.
+Ödeme idempotency, FaturaKapat, fiş response, vardiya, Desktop ve diğer
+önceki kapsam dışı işler bu görevde uygulanmamıştır.

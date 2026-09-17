@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
 
 namespace PanoPos.WebApi.ExceptionHandling;
@@ -9,6 +10,8 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var hata = exception as UygulamaHatasi;
+        if (exception is DbUpdateConcurrencyException)
+            hata = new UygulamaHatasi(409, "Kayit degisti", "Kayit baska bir islemle degisti. Yeniden aciniz.", "concurrency_conflict");
         var statusCode = hata?.StatusCode ?? StatusCodes.Status500InternalServerError;
 
         httpContext.Response.StatusCode = statusCode;

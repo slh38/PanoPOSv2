@@ -5,6 +5,8 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class Siparis : BaseEntity
 {
+    public long? FiyatTipiId { get; set; }
+    public Guid Surum { get; set; } = Guid.NewGuid();
     public bool KdvDahilMi { get; set; } = true;
     public decimal ToplamMatrah { get; set; }
     public decimal ToplamKdv { get; set; }

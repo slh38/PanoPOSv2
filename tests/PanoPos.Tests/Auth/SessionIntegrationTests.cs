@@ -24,7 +24,7 @@ using Serilog;
 
 namespace PanoPos.Tests.Auth;
 
-public sealed class SessionIntegrationTests : IAsyncLifetime
+public sealed partial class SessionIntegrationTests : IAsyncLifetime
 {
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     private readonly Guid tenantA = SystemSeedData.TenantGuid;

@@ -4,6 +4,8 @@ namespace PanoPos.Application.Order;
 
 public sealed class SiparisDto
 {
+    public long? FiyatTipiId { get; set; }
+    public Guid Surum { get; set; }
     public decimal ToplamMatrah { get; set; }
     public decimal ToplamKdv { get; set; }
     public long Id { get; set; }
