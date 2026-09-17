@@ -10,6 +10,7 @@ public sealed class StokKartConfiguration : IEntityTypeConfiguration<StokKart>
     {
         builder.ToTable("StokKart");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.HasOne(x => x.Kdv).WithMany().HasForeignKey(x => x.KdvId).OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.StokKartKodu).HasMaxLength(50);
         builder.Property(x => x.Ad).HasMaxLength(200).IsRequired();

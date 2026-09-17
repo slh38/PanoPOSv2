@@ -5,6 +5,7 @@ namespace PanoPos.Application.Product;
 
 public class StokKartOlusturRequestDto
 {
+    public long KdvId { get; set; }
     [Range(1, long.MaxValue)]
     public long SubeId { get; set; }
     public string? StokKartKodu { get; set; }

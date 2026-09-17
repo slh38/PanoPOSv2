@@ -4,6 +4,8 @@ namespace PanoPos.Application.Invoice;
 
 public sealed class FaturaDto
 {
+    public decimal ToplamMatrah { get; set; }
+    public decimal ToplamKdv { get; set; }
     public long Id { get; set; }
     public string FaturaNo { get; set; } = string.Empty;
     public long? SiparisId { get; set; }

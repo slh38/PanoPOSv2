@@ -4,6 +4,8 @@ namespace PanoPos.Application.Product;
 
 public sealed class StokKartListeItemDto
 {
+    public long KdvId { get; set; }
+    public decimal KdvOrani { get; set; }
     public long Id { get; set; }
     public string? StokKartKodu { get; set; }
     public string Ad { get; set; } = string.Empty;

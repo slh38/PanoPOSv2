@@ -5,6 +5,9 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class Siparis : BaseEntity
 {
+    public bool KdvDahilMi { get; set; } = true;
+    public decimal ToplamMatrah { get; set; }
+    public decimal ToplamKdv { get; set; }
     public string SiparisNo { get; set; } = string.Empty;
     public SiparisTipi SiparisTipi { get; set; }
     public long? AdisyonId { get; set; }

@@ -1180,3 +1180,70 @@ Gecici notlar:
 Durum:
 - `dotnet build src/PanoPos.Desktop/PanoPos.Desktop.csproj` gecti
 - desktop hizli satis ve tahsilat ekranlari acilabilir durumda
+
+## 2026-09-16: KDV master ve alis faturasi cekirdegi
+
+### KDV ve stok karti
+
+- Kdv master entity, audit/soft-delete mapping ve KDV0/KDV1/KDV10/KDV20 seed kayitlari eklendi.
+- Kod trim/uppercase; ad trim; oran 0..100 ve iki ondalik basamak ile dogrulanir.
+- Aktif, silinmemis kayitlarda TenantId+Kod ve TenantId+Oran filtreli unique indexleri vardir.
+- Kullanimdaki KDV silinemez. Yeni oranlar eklenebilir; oranlar enum/hard-code degildir.
+- StokKart create/update/tam-kayit isteklerinde KdvId zorunludur.
+- KDV ayni tenant icinde aktif ve silinmemis olmalidir; response KdvId/KdvOrani dondurur.
+- StokKart uzerinde mutable oran tutulmaz.
+
+### API sozlesmesi
+
+- /api/v1/kdv: POST, PUT /{id}, GET /{id}, GET, DELETE /{id}.
+- KDV yazma isteginde SubeId bulunur; GET/DELETE query parametresi subeId'dir.
+- KDV listesi arama, aktifMi, page, pageSize filtrelerini alir.
+- /api/v1/alis-fatura: POST, PUT /{id}, GET /{id}, GET, DELETE /{id}.
+- Durum endpointleri POST /{id}/kesinlestir ve POST /{id}/iptal.
+- Alis yazma isteginde SubeId bulunur; diger tekil islemler subeId query parametresini alir.
+- Alis listesi subeId, cariId, durum, baslangicTarihi, bitisTarihi, arama, page, pageSize alir.
+- Arama FaturaNo, CariKodu ve cari adinda yapilir. Listeler Dapper ile sayfalidir.
+- Mevcut sube uzerinden tenant cozumleme standardi kullanilir.
+
+### Ayar ve snapshotlar
+
+- TenantAyar: SatisFiyatlariKdvDahilMi=true, AlisFiyatlariKdvDahilMi=false.
+- Kaydi olmayan tenant icin de ayni varsayilanlar uygulanir.
+- Ayar belge olusturulurken header'a, yeni satir olusturulurken belge uzerinden detaya kopyalanir.
+- SiparisDetay/FaturaDetay KdvId, KdvOrani, KdvDahilMi, Matrah, KdvTutari, GenelIndirimPayi tutar.
+- Header ToplamMatrah/ToplamKdv saklar. Siparisten faturaya snapshotlar aynen kopyalanir.
+- Alis detaylari birim kodu/adi/katsayisi, fiyat, para birimi/kur ve vergi snapshotlarini saklar.
+- Taslak update isteginde mevcut detay Id verilirse o satirin master snapshotlari korunur.
+- Stok veya birim degisikligi mevcut satiri kaldirip Id'siz yeni satir ekleyerek yapilir.
+- Ayni faturadaki satirlar header para birimi/kuruyla uyumlu olmalidir; karma doviz hesabi eklenmedi.
+
+### Merkezi hesap
+
+- IVergiHesaplamaServisi/VergiHesaplamaServisi satis ve alis icin ortak kullanilir.
+- Decimal ve MidpointRounding.AwayFromZero kullanilir.
+- Fiyat decimal(18,4), kur decimal(18,6), parasal snapshotlar decimal(18,2).
+- Satir indirimi once uygulanir; genel indirim indirim sonrasi tutarlara oransal dagitilir.
+- Kuruslar en buyuk kalan yontemiyle, esitlikte satir sirasi kullanilarak dagitilir.
+- KDV dahil tutardan matrah ayrilir; KDV ikinci kez eklenmez.
+- Header toplamlarini kaydedilen satir sonuclari olusturur.
+
+### Alis belgesi durumlari
+
+- Taslak belge transaction icinde olusturulur/guncellenir ve soft delete edilebilir.
+- Kesinlesti/Iptal durumunda normal update/delete reddedilir.
+- Kesinlestirme tekrarlanabilir; stok, cari hareket veya odeme olusturmaz.
+- Iptal simdilik yalniz durum degistirir.
+- TODO: Stok entegrasyonunda kesinlesmis belgenin iptal/iade ve ters hareket kurallari tanimlanacak.
+
+### Migration ve dogrulama
+
+- Migration: 20260916144232_AddVatAndPurchaseInvoiceCore.
+- Mevcut migration gecmisi degistirilmedi.
+- Gecis, eski tutar alanlarini degistirmeden tenant-local KDV0 ile yeni FK/snapshot alanlarini doldurur.
+- Eski belgelerde tarihsel KDV bilinmedigi icin oran 0 kabul edilir; bu bir gecis varsayimidir.
+- Uygulama oncesi PanoPosDb'de StokKart/Siparis/Fatura sayilari 0/0/0 olarak dogrulandi.
+- PanoPosDb database update basarili.
+- SQLite testleri: 151/151 (onceki 106 + yeni 45).
+- Tum cozum build basarili; mevcut Desktop WindowsBase uyarisina dokunulmadi.
+- Gercek SQL Server uzerinde KDV ve alis listesi GET endpointleri HTTP 200 dondurdu; 4 KDV seed dogrulandi.
+- Desktop ve WebApi appsettings.json kullanici degisiklikleri korunarak commit/push yapilmadi.

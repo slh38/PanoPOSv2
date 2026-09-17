@@ -5,6 +5,8 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class StokKart : BaseEntity
 {
+    public long KdvId { get; set; }
+    public Kdv Kdv { get; set; } = null!;
     public string? StokKartKodu { get; set; }
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }

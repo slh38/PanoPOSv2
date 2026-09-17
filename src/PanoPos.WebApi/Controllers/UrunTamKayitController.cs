@@ -21,7 +21,10 @@ public sealed class StokKartTamKayitController : ControllerBase
             throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi ve en az bir satis birimi zorunludur.", "product_registration_invalid");
         var sube = await _db.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, ct) ?? throw new UygulamaHatasi(404,"Sube bulunamadi","Sube bulunamadi.","sube_not_found");
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var kdv = await _db.Kdvler.SingleOrDefaultAsync(x => x.Id == request.KdvId && x.TenantId == sube.TenantId && x.AktifMi, ct)
+            ?? throw new UygulamaHatasi(400, "Gecersiz KDV", "Ayni tenant icinde aktif KDV secilmelidir.", "kdv_invalid");
         var urun = new StokKart { TenantId=sube.TenantId, SubeId=sube.Id, StokKartKodu=string.IsNullOrWhiteSpace(request.StokKartKodu)?null:request.StokKartKodu.Trim(), Ad=request.Ad.Trim(), Aciklama=request.Aciklama?.Trim(), StokKartTipi=request.StokKartTipi, StokKategoriId=request.StokKategoriId, StokGrupId=request.StokGrupId };
+        urun.KdvId = kdv.Id;
         _db.StokKartler.Add(urun); await _db.SaveChangesAsync(ct);
         foreach (var item in request.SatisBirimleri)
         {
@@ -35,6 +38,6 @@ public sealed class StokKartTamKayitController : ControllerBase
                 _db.StokKartFiyatlari.Add(new StokKartFiyat { TenantId=sube.TenantId, SubeId=sube.Id, StokKartSatisBirimiId=birim.Id, FiyatTipiId=fiyat.FiyatTipiId, Fiyat=fiyat.Fiyat, ParaBirimKodu=kod });
             }
         }
-        await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return Ok(new { urun.Id });
+        await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return Ok(new { urun.Id, urun.KdvId, KdvOrani = kdv.Oran });
     }
 }

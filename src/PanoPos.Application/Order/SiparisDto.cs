@@ -4,6 +4,8 @@ namespace PanoPos.Application.Order;
 
 public sealed class SiparisDto
 {
+    public decimal ToplamMatrah { get; set; }
+    public decimal ToplamKdv { get; set; }
     public long Id { get; set; }
     public string SiparisNo { get; set; } = string.Empty;
     public SiparisTipi SiparisTipi { get; set; }

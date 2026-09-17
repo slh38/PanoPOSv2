@@ -5,6 +5,9 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class Fatura : BaseEntity
 {
+    public bool KdvDahilMi { get; set; } = true;
+    public decimal ToplamMatrah { get; set; }
+    public decimal ToplamKdv { get; set; }
     public string FaturaNo { get; set; } = string.Empty;
     public long? SiparisId { get; set; }
     public long? CariId { get; set; }

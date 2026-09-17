@@ -1,3 +1,4 @@
+using PanoPos.Application.Tax;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
@@ -14,6 +15,7 @@ public sealed class SiparisServisi : ISiparisServisi
 {
     private readonly PanoPosDbContext _dbContext;
     private readonly IOutboxServisi _outboxServisi;
+    private readonly IVergiHesaplamaServisi _vergi;
 
     public SiparisServisi(PanoPosDbContext dbContext)
         : this(dbContext, new BosOutboxServisi())
@@ -21,9 +23,15 @@ public sealed class SiparisServisi : ISiparisServisi
     }
 
     public SiparisServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi)
+        : this(dbContext, outboxServisi, new VergiHesaplamaServisi())
+    {
+    }
+
+    public SiparisServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi, IVergiHesaplamaServisi vergi)
     {
         _dbContext = dbContext;
         _outboxServisi = outboxServisi;
+        _vergi = vergi;
     }
 
     public async Task<SiparisDto> SiparisOlusturAsync(SiparisOlusturRequestDto request, CancellationToken cancellationToken = default)
@@ -55,7 +63,7 @@ public sealed class SiparisServisi : ISiparisServisi
 
         if (request.AdisyonId.HasValue)
         {
-            var adisyonVar = await _dbContext.Adisyonlar.AnyAsync(x => x.Id == request.AdisyonId.Value && x.Durum == AdisyonDurumu.Acik, cancellationToken);
+            var adisyonVar = await _dbContext.Adisyonlar.AnyAsync(x => x.Id == request.AdisyonId.Value && x.TenantId == sube.TenantId && x.SubeId == sube.Id && x.Durum == AdisyonDurumu.Acik, cancellationToken);
             if (!adisyonVar)
             {
                 throw new UygulamaHatasi(404, "Adisyon bulunamadi", "Acik adisyon bulunamadi.", "open_adisyon_not_found");
@@ -64,15 +72,17 @@ public sealed class SiparisServisi : ISiparisServisi
 
         if (request.CariId.HasValue)
         {
-            var cariVar = await _dbContext.Cariler.AnyAsync(x => x.Id == request.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
+            var cariVar = await _dbContext.Cariler.AnyAsync(x => x.Id == request.CariId.Value && x.TenantId == sube.TenantId && x.AktifMi && x.SubeId == request.SubeId, cancellationToken);
             if (!cariVar)
             {
                 throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_not_found");
             }
         }
 
+        var dahil = await _dbContext.TenantAyarlari.Where(x => x.TenantId == sube.TenantId).Select(x => (bool?)x.SatisFiyatlariKdvDahilMi).SingleOrDefaultAsync(cancellationToken) ?? true;
         var siparis = new Siparis
         {
+            KdvDahilMi = dahil,
             TenantId = sube.TenantId,
             SubeId = sube.Id,
             SiparisNo = await SiparisNoUretAsync(sube.TenantId, cancellationToken),
@@ -81,7 +91,7 @@ public sealed class SiparisServisi : ISiparisServisi
             CariId = request.CariId,
             Aciklama = NormalizeOptional(request.Aciklama),
             ParaBirimKodu = request.ParaBirimKodu.Trim().ToUpperInvariant(),
-            Kur = request.Kur,
+            Kur = request.ParaBirimKodu.Trim().ToUpperInvariant() == "TRY" ? 1m : request.Kur,
             AraToplam = 0,
             GenelIndirimOrani = request.GenelIndirimOrani,
             GenelIndirimTutari = request.GenelIndirimTutari ?? 0,
@@ -101,7 +111,8 @@ public sealed class SiparisServisi : ISiparisServisi
 
     public async Task<SiparisDto> SiparisSatirEkleAsync(long id, SiparisSatirEkleRequestDto request, CancellationToken cancellationToken = default)
     {
-        if (request.StokKartId <= 0 || request.Miktar <= 0 || request.BirimFiyat < 0)
+        if (request.StokKartId <= 0 || request.Miktar <= 0 || request.BirimFiyat < 0 ||
+            decimal.Round(request.BirimFiyat, 4) != request.BirimFiyat || decimal.Round(request.Miktar, 3) != request.Miktar)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "StokKartId, Miktar ve BirimFiyat gecersiz.", "siparis_line_invalid");
         }
@@ -116,24 +127,39 @@ public sealed class SiparisServisi : ISiparisServisi
             throw new UygulamaHatasi(409, "Siparis guncellenemedi", "Sadece bekleyen siparise satir eklenebilir.", "siparis_not_editable");
         }
 
-        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId, cancellationToken)
+        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
             ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
 
         if (request.StokKartVaryantId.HasValue)
         {
-            var varyantVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.Id == request.StokKartVaryantId.Value && x.StokKartId == request.StokKartId, cancellationToken);
+            var varyantVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.Id == request.StokKartVaryantId.Value && x.StokKartId == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken);
             if (!varyantVar)
             {
                 throw new UygulamaHatasi(404, "Varyant bulunamadi", "Varyant bulunamadi.", "variant_not_found");
             }
         }
 
-        var detay = SiparisDetayToplamHesapla(new SiparisDetay
+        var kdv = await _dbContext.Kdvler.SingleOrDefaultAsync(x => x.Id == urun.KdvId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+            ?? throw new UygulamaHatasi(400, "Gecersiz KDV", "Stok kartinin aktif KDV kaydi bulunamadi.", "kdv_invalid");
+        StokKartSatisBirimi? birim = null;
+        if (request.StokKartSatisBirimiId.HasValue)
+            birim = await _dbContext.StokKartSatisBirimleri.SingleOrDefaultAsync(x => x.Id == request.StokKartSatisBirimiId &&
+                x.StokKartId == urun.Id && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+                ?? throw new UygulamaHatasi(400, "Gecersiz birim", "Satis birimi bulunamadi.", "sales_unit_invalid");
+        var fiyatParaBirimi = (request.FiyatParaBirimKodu ?? siparis.ParaBirimKodu).Trim().ToUpperInvariant();
+        var fiyatKur = fiyatParaBirimi == "TRY" ? 1m : request.FiyatKur ?? siparis.Kur;
+        if (fiyatParaBirimi.Length is < 1 or > 10 || fiyatKur <= 0)
+            throw new UygulamaHatasi(400, "Gecersiz kur", "Fiyat para birimi veya kuru gecersiz.", "price_currency_invalid");
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var detay = new SiparisDetay
         {
             TenantId = siparis.TenantId,
             SubeId = siparis.SubeId,
             SiparisId = siparis.Id,
             StokKartId = request.StokKartId,
+            KdvId = kdv.Id, KdvOrani = kdv.Oran, KdvDahilMi = siparis.KdvDahilMi,
+            StokKartSatisBirimiId = birim?.Id, BirimAdi = birim?.BirimAdi, BirimKatsayi = birim?.Katsayi,
+            FiyatParaBirimKodu = fiyatParaBirimi, FiyatKur = fiyatKur,
             StokKartVaryantId = request.StokKartVaryantId,
             Miktar = request.Miktar,
             BirimFiyat = request.BirimFiyat,
@@ -142,15 +168,16 @@ public sealed class SiparisServisi : ISiparisServisi
             Aciklama = NormalizeOptional(request.Aciklama),
             AktifMi = true,
             SilindiMi = false
-        });
+        };
 
         _dbContext.SiparisDetaylari.Add(detay);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var detaylar = await _dbContext.SiparisDetaylari.Where(x => x.SiparisId == siparis.Id).ToListAsync(cancellationToken);
+        var detaylar = await _dbContext.SiparisDetaylari.Where(x => x.SiparisId == siparis.Id && x.AktifMi).OrderBy(x => x.Id).ToListAsync(cancellationToken);
         SiparisToplamlariniHesapla(siparis, detaylar);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await SiparisGetirAsync(siparis.Id, cancellationToken);
     }
 
@@ -173,6 +200,7 @@ public sealed class SiparisServisi : ISiparisServisi
             ParaBirimKodu = siparis.ParaBirimKodu,
             Kur = siparis.Kur,
             AraToplam = siparis.AraToplam,
+            ToplamMatrah = siparis.ToplamMatrah, ToplamKdv = siparis.ToplamKdv,
             GenelIndirimOrani = siparis.GenelIndirimOrani,
             GenelIndirimTutari = siparis.GenelIndirimTutari,
             NetToplam = siparis.NetToplam,
@@ -182,6 +210,8 @@ public sealed class SiparisServisi : ISiparisServisi
             Detaylar = siparis.Detaylar.OrderBy(x => x.Id).Select(x => new SiparisDetayDto
             {
                 Id = x.Id,
+                KdvId = x.KdvId, KdvOrani = x.KdvOrani, KdvDahilMi = x.KdvDahilMi,
+                Matrah = x.Matrah, KdvTutari = x.KdvTutari, GenelIndirimPayi = x.GenelIndirimPayi,
                 StokKartId = x.StokKartId,
                 StokKartAd = x.StokKart.Ad,
                 StokKartVaryantId = x.StokKartVaryantId,
@@ -287,69 +317,23 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         return await SiparisGetirAsync(id, cancellationToken);
     }
 
-    private static SiparisDetay SiparisDetayToplamHesapla(SiparisDetay detay)
+    private void SiparisToplamlariniHesapla(Siparis siparis, IEnumerable<SiparisDetay> detaylar)
     {
-        SiparisSatirIndirimKontrolu(detay.IndirimOrani, detay.IndirimTutari == 0 ? null : detay.IndirimTutari);
-
-        detay.SatirAraToplam = detay.Miktar * detay.BirimFiyat;
-
-        if (detay.IndirimOrani.HasValue)
+        var lines = detaylar.ToList();
+        if (lines.Count == 0) { siparis.AraToplam = siparis.NetToplam = siparis.ToplamTutar = siparis.ToplamMatrah = siparis.ToplamKdv = 0; return; }
+        var sonuc = _vergi.Hesapla(lines.Select(x => new VergiSatir(x.Miktar, x.BirimFiyat, x.KdvOrani,
+            x.KdvDahilMi, x.IndirimOrani, x.IndirimTutari)).ToList(), siparis.GenelIndirimOrani,
+            siparis.GenelIndirimOrani.HasValue ? 0m : siparis.GenelIndirimTutari);
+        for (var i = 0; i < lines.Count; i++)
         {
-            detay.IndirimTutari = Math.Round(detay.SatirAraToplam * detay.IndirimOrani.Value / 100m, 2, MidpointRounding.AwayFromZero);
+            var line = lines[i]; var r = sonuc.Satirlar[i];
+            line.SatirAraToplam = r.AraToplam; line.IndirimTutari = r.IndirimTutari;
+            line.GenelIndirimPayi = r.GenelIndirimPayi; line.Matrah = r.Matrah; line.KdvTutari = r.KdvTutari;
+            line.SatirNetToplam = line.SatirToplam = r.NetToplam;
         }
-
-        if (detay.IndirimTutari < 0)
-        {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "IndirimTutari negatif olamaz.", "line_discount_amount_invalid");
-        }
-
-        if (detay.IndirimTutari > detay.SatirAraToplam)
-        {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "IndirimTutari satir ara toplamindan buyuk olamaz.", "line_discount_amount_too_high");
-        }
-
-        detay.SatirNetToplam = detay.SatirAraToplam - detay.IndirimTutari;
-        detay.SatirToplam = detay.SatirNetToplam;
-        return detay;
-    }
-
-    private static void SiparisToplamlariniHesapla(Siparis siparis, IEnumerable<SiparisDetay> detaylar)
-    {
-        SiparisGenelIndirimKontrolu(siparis.GenelIndirimOrani, siparis.GenelIndirimTutari > 0 ? siparis.GenelIndirimTutari : null);
-
-        var detayListesi = detaylar.ToList();
-        siparis.AraToplam = detayListesi.Sum(x => x.SatirAraToplam);
-        var satirNetToplam = detayListesi.Sum(x => x.SatirNetToplam);
-
-        if (siparis.GenelIndirimOrani.HasValue)
-        {
-            siparis.GenelIndirimTutari = Math.Round(satirNetToplam * siparis.GenelIndirimOrani.Value / 100m, 2, MidpointRounding.AwayFromZero);
-        }
-
-        if (siparis.GenelIndirimTutari < 0)
-        {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "GenelIndirimTutari negatif olamaz.", "order_discount_amount_invalid");
-        }
-
-        if (satirNetToplam == 0)
-        {
-            siparis.NetToplam = 0;
-            siparis.ToplamTutar = 0;
-            return;
-        }
-
-        if (siparis.GenelIndirimTutari > satirNetToplam)
-        {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "NetToplam negatif olamaz.", "order_net_total_negative");
-        }
-
-        siparis.NetToplam = satirNetToplam - siparis.GenelIndirimTutari;
-        if (siparis.NetToplam < 0)
-        {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "NetToplam negatif olamaz.", "order_net_total_negative");
-        }
-
-        siparis.ToplamTutar = siparis.NetToplam;
+        siparis.AraToplam = sonuc.AraToplam; siparis.GenelIndirimTutari = sonuc.GenelIndirimTutari;
+        siparis.ToplamMatrah = sonuc.ToplamMatrah; siparis.ToplamKdv = sonuc.ToplamKdv;
+        siparis.NetToplam = siparis.ToplamTutar = sonuc.NetToplam;
     }
 
     private static void SiparisSatirIndirimKontrolu(decimal? indirimOrani, decimal? indirimTutari)

@@ -14,6 +14,10 @@ public sealed class PanoPosDbContext : DbContext
     }
 
     public DbSet<Tenant> Tenantler => Set<Tenant>();
+    public DbSet<Kdv> Kdvler => Set<Kdv>();
+    public DbSet<TenantAyar> TenantAyarlari => Set<TenantAyar>();
+    public DbSet<AlisFatura> AlisFaturalar => Set<AlisFatura>();
+    public DbSet<AlisFaturaDetay> AlisFaturaDetaylari => Set<AlisFaturaDetay>();
     public DbSet<Depo> Depolar => Set<Depo>();
     public DbSet<Sube> Subeler => Set<Sube>();
     public DbSet<Cihaz> Cihazlar => Set<Cihaz>();
@@ -127,7 +131,8 @@ public sealed class PanoPosDbContext : DbContext
             {
                 entry.Entity.OlusturmaTarihi = utcNow;
                 entry.Entity.GuncellemeTarihi = utcNow;
-                entry.Entity.AktifMi = true;
+                if (entry.Entity is not Kdv)
+                    entry.Entity.AktifMi = true;
                 entry.Entity.SilindiMi = false;
                 continue;
             }
@@ -162,4 +167,3 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<FiyatTipi>().HasData(SystemSeedData.FiyatTipleri);
     }
 }
-

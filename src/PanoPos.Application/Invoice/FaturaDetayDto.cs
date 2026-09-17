@@ -2,6 +2,12 @@ namespace PanoPos.Application.Invoice;
 
 public sealed class FaturaDetayDto
 {
+    public long KdvId { get; set; }
+    public decimal KdvOrani { get; set; }
+    public bool KdvDahilMi { get; set; }
+    public decimal GenelIndirimPayi { get; set; }
+    public decimal Matrah { get; set; }
+    public decimal KdvTutari { get; set; }
     public long Id { get; set; }
     public long StokKartId { get; set; }
     public string StokKartAd { get; set; } = string.Empty;

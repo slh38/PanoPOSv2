@@ -47,6 +47,7 @@ public sealed class ProductServicesTests : IDisposable
     {
         var urun = await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
+            KdvId = 1,
             SubeId = 1,
             StokKartKodu = "URN-001",
             Ad = "Kola",
@@ -93,6 +94,7 @@ public sealed class ProductServicesTests : IDisposable
 
         var urun = await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
+            KdvId = 1,
             SubeId = 1,
             StokKartKodu = "URN-KTG-001",
             Ad = "Kola",
@@ -115,6 +117,7 @@ public sealed class ProductServicesTests : IDisposable
 
         await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
+            KdvId = 1,
             SubeId = 1,
             StokKartKodu = "URN-LIST-001",
             Ad = "Cips",
@@ -256,6 +259,7 @@ public sealed class ProductServicesTests : IDisposable
     {
         return _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
+            KdvId = 1,
             SubeId = 1,
             StokKartKodu = kod,
             Ad = ad,

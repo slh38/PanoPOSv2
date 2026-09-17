@@ -145,3 +145,15 @@ Yeni bir is bittiginde en az su iki dosya guncellenmeli:
 
 Bu dosyada kisa ozet tutulur.
 Detayli teknik sonuc, test ve migration bilgisi `implemented-core-steps.md` icinde kalir.
+
+## 2026-09-16: KDV ve alis faturasi
+
+- KDV master CRUD/seed/unique kurallari ve StokKart.KdvId iliskisi eklendi.
+- Tenant seviyesinde satis dahil / alis haric ayarlari belgeye snapshot olarak kaydediliyor.
+- Ortak hesaplama servisi satir/genel iskonto, KDV ve deterministik kurus dagitimini yapiyor.
+- Siparis -> Fatura KDV snapshot aktarimi ve alis faturasi taslak/kesinlestirme/iptal akislari tamamlandi.
+- Migration 20260916144232_AddVatAndPurchaseInvoiceCore PanoPosDb'ye uygulandi.
+- Test 151/151; build basarili; mevcut Desktop WindowsBase uyarisi devam ediyor.
+- Stok hareketi, alis odemesi ve cari hareket eklenmedi.
+- TODO: Stok entegrasyonunda kesinlesmis alis belgesinin iptal/iade davranisi.
+- Kullanici Desktop/appsettings.json degisikliklerine dokunulmadi. Commit/push icin onay bekleniyor.

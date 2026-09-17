@@ -23,7 +23,7 @@ public sealed class StokKartFiyatControllerTests : IDisposable
         _connection.Open();
         _db = new PanoPosDbContext(new DbContextOptionsBuilder<PanoPosDbContext>().UseSqlite(_connection).Options);
         _db.Database.EnsureCreated();
-        var urun = new StokKart { TenantId = SystemSeedData.TenantGuid, SubeId = 1, Ad = "Test" };
+        var urun = new StokKart { KdvId = 1, TenantId = SystemSeedData.TenantGuid, SubeId = 1, Ad = "Test" };
         _db.StokKartler.Add(urun); _db.SaveChanges();
         _birim = new StokKartSatisBirimi { TenantId = SystemSeedData.TenantGuid, SubeId = 1, StokKartId = urun.Id, BirimAdi = "Adet", BirimKodu = "ADET", Katsayi = 1 };
         _tip = new FiyatTipi { TenantId = SystemSeedData.TenantGuid, SubeId = 1, Kod = "TEST", Ad = "Test" };

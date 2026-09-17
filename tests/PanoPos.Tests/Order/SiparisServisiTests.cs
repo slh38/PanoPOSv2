@@ -318,6 +318,7 @@ public sealed class SiparisServisiTests : IDisposable
     {
         var urun = new StokKart
         {
+            KdvId = 1,
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
             Ad = ad,

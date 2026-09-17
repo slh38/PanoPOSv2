@@ -42,6 +42,9 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IPinHashServisi, PinHashServisi>();
+        services.AddScoped<PanoPos.Application.Tax.IKdvServisi, PanoPos.Infrastructure.Tax.KdvServisi>();
+        services.AddScoped<PanoPos.Application.Tax.IVergiHesaplamaServisi, PanoPos.Application.Tax.VergiHesaplamaServisi>();
+        services.AddScoped<PanoPos.Application.Purchase.IAlisFaturaServisi, PanoPos.Infrastructure.Purchase.AlisFaturaServisi>();
         services.AddScoped<IIslemLogServisi, IslemLogServisi>();
         services.AddScoped<IOutboxServisi, OutboxServisi>();
         services.AddScoped<IAuthServisi, AuthServisi>();

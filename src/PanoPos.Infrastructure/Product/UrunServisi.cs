@@ -27,6 +27,7 @@ public sealed class StokKartServisi : IStokKartServisi
             ?? throw new UygulamaHatasi(404, "Sube bulunamadi", "Sube bulunamadi.", "sube_not_found");
 
         await StokKartKoduTekrarKontroluAsync(sube.TenantId, request.StokKartKodu, null, cancellationToken);
+        await KdvKontroluAsync(request.KdvId, sube.TenantId, cancellationToken);
         await KategoriVeGrupKontroluAsync(request.StokKategoriId, request.StokGrupId, cancellationToken);
 
         var urun = new StokKart
@@ -39,6 +40,7 @@ public sealed class StokKartServisi : IStokKartServisi
             StokKartTipi = request.StokKartTipi,
             StokKategoriId = request.StokKategoriId,
             StokGrupId = request.StokGrupId,
+            KdvId = request.KdvId,
             AktifMi = true,
             SilindiMi = false
         };
@@ -60,6 +62,7 @@ public sealed class StokKartServisi : IStokKartServisi
             ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
 
         await StokKartKoduTekrarKontroluAsync(urun.TenantId, request.StokKartKodu, urun.Id, cancellationToken);
+        await KdvKontroluAsync(request.KdvId, urun.TenantId, cancellationToken);
         await KategoriVeGrupKontroluAsync(request.StokKategoriId, request.StokGrupId, cancellationToken);
 
         urun.StokKartKodu = NormalizeOptional(request.StokKartKodu);
@@ -68,6 +71,7 @@ public sealed class StokKartServisi : IStokKartServisi
         urun.StokKartTipi = request.StokKartTipi;
         urun.StokKategoriId = request.StokKategoriId;
         urun.StokGrupId = request.StokGrupId;
+        urun.KdvId = request.KdvId;
         urun.AktifMi = request.AktifMi;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -77,6 +81,7 @@ public sealed class StokKartServisi : IStokKartServisi
     public async Task<StokKartDto> StokKartDetayGetirAsync(long id, CancellationToken cancellationToken = default)
     {
         var urun = await _dbContext.StokKartler
+            .Include(x => x.Kdv)
             .Include(x => x.StokKategori)
             .Include(x => x.StokGrup)
             .Include(x => x.Varyantlar.Where(y => y.AktifMi)).ThenInclude(x => x.Renk)
@@ -88,6 +93,8 @@ public sealed class StokKartServisi : IStokKartServisi
         return new StokKartDto
         {
             Id = urun.Id,
+            KdvId = urun.KdvId,
+            KdvOrani = urun.Kdv.Oran,
             StokKartKodu = urun.StokKartKodu,
             Ad = urun.Ad,
             Aciklama = urun.Aciklama,
@@ -141,16 +148,18 @@ WHERE u.SilindiMi = 0
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
-            ? @"SELECT u.Id, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
+            ? @"SELECT u.Id, u.KdvId, k.Oran AS KdvOrani, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
 FROM StokKart u
+JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
 LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
 LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
 WHERE u.SilindiMi = 0
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search)
 ORDER BY u.Ad
 LIMIT @Take OFFSET @Skip;"
-            : @"SELECT u.Id, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
+            : @"SELECT u.Id, u.KdvId, k.Oran AS KdvOrani, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
 FROM StokKart u
+JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
 LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
 LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
 WHERE u.SilindiMi = 0
@@ -276,4 +285,9 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
     }
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private async Task KdvKontroluAsync(long id, Guid tenant, CancellationToken ct)
+    {
+        if (!await _dbContext.Kdvler.AnyAsync(x => x.Id == id && x.TenantId == tenant && x.AktifMi, ct))
+            throw new UygulamaHatasi(400, "Gecersiz KDV", "Ayni tenant icinde aktif KDV secilmelidir.", "kdv_invalid");
+    }
 }

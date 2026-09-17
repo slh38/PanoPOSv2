@@ -4,6 +4,12 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class SiparisDetay : BaseEntity
 {
+    public long KdvId { get; set; }
+    public decimal KdvOrani { get; set; }
+    public bool KdvDahilMi { get; set; }
+    public decimal GenelIndirimPayi { get; set; }
+    public decimal Matrah { get; set; }
+    public decimal KdvTutari { get; set; }
     public long SiparisId { get; set; }
     public long StokKartId { get; set; }
     public long? StokKartVaryantId { get; set; }

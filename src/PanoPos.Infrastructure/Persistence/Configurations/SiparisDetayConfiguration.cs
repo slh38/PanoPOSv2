@@ -10,6 +10,11 @@ public sealed class SiparisDetayConfiguration : IEntityTypeConfiguration<Siparis
     {
         builder.ToTable("SiparisDetay");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.Property(x => x.KdvOrani).HasPrecision(5, 2);
+        builder.Property(x => x.Matrah).HasPrecision(18, 2);
+        builder.Property(x => x.KdvTutari).HasPrecision(18, 2);
+        builder.Property(x => x.GenelIndirimPayi).HasPrecision(18, 2);
+        builder.HasOne<Kdv>().WithMany().HasForeignKey(x => x.KdvId).OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.BirimAdi).HasMaxLength(100);
         builder.Property(x => x.BirimKatsayi).HasColumnType("decimal(18,3)");

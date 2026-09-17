@@ -10,6 +10,8 @@ public sealed class FaturaConfiguration : IEntityTypeConfiguration<Fatura>
     {
         builder.ToTable("Fatura");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.Property(x => x.ToplamMatrah).HasPrecision(18, 2);
+        builder.Property(x => x.ToplamKdv).HasPrecision(18, 2);
 
         builder.Property(x => x.FaturaNo).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Aciklama).HasMaxLength(500);

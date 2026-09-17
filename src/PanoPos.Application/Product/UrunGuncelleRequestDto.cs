@@ -5,6 +5,7 @@ namespace PanoPos.Application.Product;
 
 public sealed class StokKartGuncelleRequestDto
 {
+    public long KdvId { get; set; }
     public string? StokKartKodu { get; set; }
     [Required]
     public string Ad { get; set; } = string.Empty;

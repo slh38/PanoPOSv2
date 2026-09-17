@@ -202,6 +202,7 @@ public sealed class FaturaServisiTests : IDisposable
     {
         var urun = new StokKart
         {
+            KdvId = 1,
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
             Ad = urunAd,
