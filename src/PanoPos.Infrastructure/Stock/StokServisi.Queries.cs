@@ -63,7 +63,7 @@ AND (@Search IS NULL OR FisNo LIKE @Search OR Aciklama LIKE @Search)";
         var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition("SELECT COUNT(1)" + where, args, cancellationToken: ct));
         var paging = (db.Database.ProviderName ?? "").Contains("Sqlite") ? " LIMIT @Take OFFSET @Skip" : " OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY";
         var rows = await conn.QueryAsync<StokFisListeDto>(new CommandDefinition(
-            "SELECT Id, AlisFaturaId, StokFisTipi, FisNo, FisTarihi, DepoId, KaynakDepoId, HedefDepoId, Aciklama" +
+            "SELECT Id, FaturaId, AlisFaturaId, StokFisTipi, FisNo, FisTarihi, DepoId, KaynakDepoId, HedefDepoId, Aciklama" +
             where + " ORDER BY FisTarihi DESC, Id DESC" + paging, args, cancellationToken: ct));
         return new() { Kayitlar = rows.ToList(), ToplamKayit = count, Sayfa = r.Page, SayfaBoyutu = r.PageSize };
     }

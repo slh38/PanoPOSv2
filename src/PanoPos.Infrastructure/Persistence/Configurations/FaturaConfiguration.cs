@@ -10,6 +10,7 @@ public sealed class FaturaConfiguration : IEntityTypeConfiguration<Fatura>
     {
         builder.ToTable("Fatura");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.HasOne<Depo>().WithMany().HasForeignKey(x => x.DepoId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.ToplamMatrah).HasPrecision(18, 2);
         builder.Property(x => x.ToplamKdv).HasPrecision(18, 2);
 

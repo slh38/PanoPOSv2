@@ -481,9 +481,9 @@ Katsayi = 24
 
 snapshot olarak saklanır.
 
-İleride stok hareketi oluşturulduğunda bunun stok etkisi:
+Satış faturası oluşturulduğunda bunun stok etkisi:
 
-24 temel birim
+24 temel birim çıkış
 
 olacaktır.
 
@@ -898,6 +898,41 @@ FaturaDetay satış anındaki bilgileri snapshot olarak saklar.
 
 daha sonra master kayıtlar değişse bile geçmiş Fatura değişmemelidir.
 
+Mevcut satış stok akışı:
+
+Siparis -> Fatura -> StokFis(Satis) -> StokFisDetay -> StokHareket(-)
+
+Sepet, bekleyen sipariş, sipariş satırı ve açık restaurant adisyonu stok
+etkilemez. Stok çıkışı Fatura oluşturulduğu anda, tahsilattan bağımsızdır.
+Nakit, kart, veresiye ve parçalı tahsilat yeni stok hareketi oluşturmaz.
+Eksi stok şimdilik serbesttir.
+
+POST /api/v1/fatura/olustur-siparisten isteği isteğe bağlı DepoId alır.
+Verilmezse aynı Tenant/Sube içinde aktif ve silinmemiş tam bir varsayılan
+depo aranır; sıfır veya birden fazla sonuç açık hata üretir.
+Fatura.DepoId zorunlu ve kalıcıdır; liste/detay cevaplarında döner.
+
+Fatura, detayları, satış stok fişi/detayları, negatif hareketler,
+IslemLog, mevcut Fatura Outbox olayı ve sipariş durum değişimi tek
+transaction içindedir. SQL Server'da sipariş UPDLOCK/HOLDLOCK ile
+kilitlenir; dönüşüm kontrolleri transaction içinde güncel kayıtla yapılır.
+StokFis.FaturaId nullable FK ve unique filtered index aynı faturanın
+ikinci stok fişini engeller; stok fişi cevapları FaturaId içerir.
+Tekrarlanan sipariş dönüşümü mevcut domain hata standardıyla reddedilir.
+
+Satış fişi SATIS-{FaturaId} numarasını ve fatura oluşturma tarihini alır.
+Hareket miktarı -(Miktar * snapshot BirimKatsayi) olur; master katsayı
+yeniden alınmaz. BirimKodu siparişten faturaya ve stok detayına taşınır.
+İstek satış birimi içermiyorsa sipariş satırında tek aktif varsayılan
+satış birimi varsa kullanılır. Birim snapshotı eksik eski/uygunsuz
+sipariş faturalaştırılamaz; sessiz katsayı/depo tahmini yapılmaz.
+
+Stoklanmış faturanın depo/kimlik ve detay değişikliği veya silinmesi
+normal yazma akışında engellenir. Ödenen/kalan ve ödeme kapanış alanları
+mevcut tahsilat akışında güncellenebilir.
+Stoklanmış faturanın iptali sales_stock_reversal_required hatası verir.
+Satış reversal/iade ve ters stok hareketi henüz tamamlanmamıştır.
+
 ---
 
 # 38. ALIŞ FATURASI
@@ -1288,8 +1323,9 @@ Manuel Düzeltme
 
 Mevcut çekirdekte Devir, Sayım ve DepoTransfer uygulanmıştır.
 Alış faturası kesinleştirmesi Alış stok girişine bağlanmıştır.
-Satış ve iade tipleri enum seviyesinde bulunur; satış/iade
-entegrasyonları ve üretim henüz uygulanmamıştır.
+Satış faturası oluşturma Satış stok çıkışına bağlanmıştır.
+İade tipleri enum seviyesinde bulunur; iade/ters hareket entegrasyonları
+ve üretim henüz uygulanmamıştır.
 
 StokFis belgeyi, StokFisDetay birim/katsayı ve miktar snapshotlarını,
 StokHareket değiştirilemeyen işaretli temel miktarı saklar.
@@ -1690,8 +1726,8 @@ KasaHareket
 
 akışı oluşur.
 
-Stok entegrasyonu tamamlandığında ayrıca ilgili depodan stok
-azaltılacaktır.
+Fatura oluşturulurken ilgili depodan stok azaltılır; tahsilat ikinci
+stok çıkışı oluşturmaz.
 
 ---
 
@@ -1741,11 +1777,11 @@ KdvDahilMi = false
 
 snapshot tutulur.
 
-Stok entegrasyonu tamamlandığında stok etkisi:
+Fatura oluşturulduğunda stok etkisi:
 
 24 temel birim çıkış
 
-olacaktır.
+olur.
 
 ---
 
@@ -1995,7 +2031,6 @@ Bu liste projenin ilerlemesiyle güncellenmelidir.
 Aşağıdaki alanların bazıları planlanmıştır ancak tam uygulaması henüz
 yapılmamıştır:
 
-- stok satış çıkışı
 - satış/alış iade stok entegrasyonu
 - gelişmiş stok bakiye optimizasyonu
 - alış ödeme/borç entegrasyonunun tamamı
@@ -2036,7 +2071,8 @@ mevcut Outbox altyapısı değiştirilmemiştir.
 Stok migration: 20260917080742_AddStockLedgerCore.
 PanoPosDb database update başarılı; 42 yeni SQLite stok testi ile
 toplam 193/193 test başarılıdır. Solution build başarılıdır.
-Fatura satış stok bağlantısı, StokBakiye ve Desktop değişikliği yoktur.
+Bu ilk stok çekirdeği aşamasında Fatura bağlantısı yoktu.
+StokBakiye ve Desktop entegrasyonu henüz yapılmamıştır.
 
 Alış stok entegrasyonu migration:
 20260917084513_LinkPurchaseInvoiceToStockLedger.
@@ -2048,6 +2084,19 @@ POST /api/v1/alis-fatura/{id}/kesinlestir stok üretir.
 Stoklanmış faturanın iptal isteği purchase_stock_reversal_required
 hatasıyla reddedilir. Cari/ödeme entegrasyonu ve Outbox event'i
 eklenmemiştir; mevcut stok çekirdeği gibi IslemLog kullanılır.
+
+Satış stok entegrasyonu migration:
+20260917091951_LinkSalesInvoiceToStockLedger.
+PanoPosDb database update başarılıdır; veri silme/backfill yapılmamıştır.
+43 yeni SQLite test senaryosuyla toplam 260/260 test başarılıdır.
+Mevcut 217 test korunmuş; fatura iptal beklentisi yeni ters hareket
+kuralına, fixture verileri zorunlu depo/birim ilişkilerine uyarlanmıştır.
+Solution build başarılıdır; mevcut Desktop WindowsBase uyarısı sürer.
+Testler rollback, snapshot, depo izolasyonu, unique/FK, restaurant,
+fiyat/KDV bağımsızlığı, nakit/kart/veresiye ve değişiklik korumasını kapsar.
+SQL Server eşzamanlı istek yük testi ayrıca yapılmamıştır; SQLite testleri
+tekrar çağrı ve veritabanı unique korumasını doğrular.
+Desktop, appsettings.json ve CODEX_RULES.md değiştirilmemiştir.
 
 ---
 

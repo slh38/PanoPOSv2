@@ -146,15 +146,13 @@ public sealed class FaturaServisiTests : IDisposable
     }
 
     [Fact]
-    public async Task Fatura_iptal_edilir()
+    public async Task Stoklanmis_fatura_ters_hareketsiz_iptal_edilemez()
     {
         var siparis = await HazirSiparisAsync();
         var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
 
-        var iptal = await _faturaServisi.FaturaIptalAsync(fatura.Id, new FaturaIptalRequestDto { Aciklama = "Iptal" });
-
-        Assert.Equal(FaturaDurumu.Iptal, iptal.Durum);
-        Assert.False(iptal.AktifMi);
+        await Assert.ThrowsAsync<UygulamaHatasi>(() => _faturaServisi.FaturaIptalAsync(fatura.Id, new FaturaIptalRequestDto { Aciklama = "Iptal" }));
+        Assert.Equal(FaturaDurumu.Acik, (await _faturaServisi.FaturaGetirAsync(fatura.Id)).Durum);
     }
 
     [Fact]
@@ -212,6 +210,11 @@ public sealed class FaturaServisiTests : IDisposable
         };
 
         _dbContext.StokKartler.Add(urun);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.StokKartSatisBirimleri.Add(new StokKartSatisBirimi {
+            TenantId = urun.TenantId, SubeId = 1, StokKartId = urun.Id,
+            BirimKodu = "AD", BirimAdi = "Adet", Katsayi = 1, VarsayilanMi = true
+        });
         await _dbContext.SaveChangesAsync();
 
         var siparis = await _siparisServisi.SiparisOlusturAsync(new SiparisOlusturRequestDto

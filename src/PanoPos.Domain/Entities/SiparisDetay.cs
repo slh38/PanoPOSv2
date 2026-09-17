@@ -14,6 +14,7 @@ public sealed class SiparisDetay : BaseEntity
     public long StokKartId { get; set; }
     public long? StokKartVaryantId { get; set; }
     public long? StokKartSatisBirimiId { get; set; }
+    public string? BirimKodu { get; set; }
     public string? BirimAdi { get; set; }
     public decimal? BirimKatsayi { get; set; }
     public decimal Miktar { get; set; }

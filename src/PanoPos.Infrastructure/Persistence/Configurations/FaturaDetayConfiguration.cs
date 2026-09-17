@@ -17,6 +17,7 @@ public sealed class FaturaDetayConfiguration : IEntityTypeConfiguration<FaturaDe
         builder.HasOne<Kdv>().WithMany().HasForeignKey(x => x.KdvId).OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.BirimAdi).HasMaxLength(100);
+        builder.Property(x => x.BirimKodu).HasMaxLength(50);
         builder.Property(x => x.BirimKatsayi).HasColumnType("decimal(18,3)");
         builder.Property(x => x.Miktar).HasColumnType("decimal(18,3)").IsRequired();
         builder.Property(x => x.BirimFiyat).HasColumnType("decimal(18,4)").IsRequired();

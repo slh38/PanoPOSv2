@@ -209,7 +209,7 @@ public sealed class TaxPurchaseTests : IDisposable
     [Fact] public async Task Satis_fatura_tahsilat_tam_akis() {
         var s=new SiparisServisi(db);
         var order=await s.SiparisOlusturAsync(new(){SubeId=1,SiparisTipi=SiparisTipi.HizliSatisBekleyen,ParaBirimKodu="TRY",Kur=1});
-        order=await s.SiparisSatirEkleAsync(order.Id,new(){StokKartId=stok.Id,Miktar=1,BirimFiyat=120});
+        order=await s.SiparisSatirEkleAsync(order.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=1,BirimFiyat=120});
         var invoice=await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new(){SiparisId=order.Id});
         var kasa=new Kasa {TenantId=stok.TenantId,SubeId=1,Ad="Test kasa"};db.Add(kasa);await db.SaveChangesAsync();
         await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new(){

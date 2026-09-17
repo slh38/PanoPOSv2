@@ -169,7 +169,7 @@ public sealed partial class StokServisi(PanoPosDbContext db, IIslemLogServisi au
     private static UygulamaHatasi Error(string message) => new(400, "Stok islemi gecersiz", message, "stock_invalid");
 
     private static StokFisDto Map(StokFis f) => new() {
-        Id = f.Id, AlisFaturaId = f.AlisFaturaId, TenantId = f.TenantId, SubeId = f.SubeId, StokFisTipi = f.StokFisTipi,
+        Id = f.Id, FaturaId = f.FaturaId, AlisFaturaId = f.AlisFaturaId, TenantId = f.TenantId, SubeId = f.SubeId, StokFisTipi = f.StokFisTipi,
         FisNo = f.FisNo, FisTarihi = f.FisTarihi, DepoId = f.DepoId, KaynakDepoId = f.KaynakDepoId,
         HedefDepoId = f.HedefDepoId, Aciklama = f.Aciklama,
         Detaylar = f.Detaylar.OrderBy(x => x.Id).Select(x => new StokFisDetayDto {

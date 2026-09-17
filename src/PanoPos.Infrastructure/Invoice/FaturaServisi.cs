@@ -11,7 +11,7 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Invoice;
 
-public sealed class FaturaServisi : IFaturaServisi
+public sealed partial class FaturaServisi : IFaturaServisi
 {
     private readonly PanoPosDbContext _dbContext;
     private readonly IOutboxServisi _outboxServisi;
@@ -34,7 +34,9 @@ public sealed class FaturaServisi : IFaturaServisi
             throw new UygulamaHatasi(400, "Gecersiz istek", "SiparisId zorunludur.", "siparis_required");
         }
 
-        var siparis = await _dbContext.Siparisler
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
+        await LockOrderAsync(request.SiparisId, cancellationToken);
+        var siparis = await _dbContext.Siparisler.AsNoTracking()
             .Include(x => x.Detaylar.Where(y => y.AktifMi))
             .SingleOrDefaultAsync(x => x.Id == request.SiparisId, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
@@ -57,12 +59,13 @@ public sealed class FaturaServisi : IFaturaServisi
             throw new UygulamaHatasi(409, "Fatura olusturulamadi", "Bu siparisten zaten fatura olusturulmus.", "invoice_already_exists");
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var depoId = await ResolveDepoAsync(siparis, request.DepoId, cancellationToken);
 
         var fatura = new Fatura
         {
             TenantId = siparis.TenantId,
             SubeId = siparis.SubeId,
+            DepoId = depoId,
             FaturaNo = await FaturaNoUretAsync(siparis.TenantId, cancellationToken),
             SiparisId = siparis.Id,
             CariId = siparis.CariId,
@@ -95,7 +98,7 @@ public sealed class FaturaServisi : IFaturaServisi
                 StokKartId = detay.StokKartId,
                 KdvId = detay.KdvId, KdvOrani = detay.KdvOrani, KdvDahilMi = detay.KdvDahilMi,
                 Matrah = detay.Matrah, KdvTutari = detay.KdvTutari, GenelIndirimPayi = detay.GenelIndirimPayi,
-                StokKartSatisBirimiId = detay.StokKartSatisBirimiId, BirimAdi = detay.BirimAdi, BirimKatsayi = detay.BirimKatsayi,
+                StokKartSatisBirimiId = detay.StokKartSatisBirimiId, BirimKodu = detay.BirimKodu, BirimAdi = detay.BirimAdi, BirimKatsayi = detay.BirimKatsayi,
                 FiyatParaBirimKodu = detay.FiyatParaBirimKodu, FiyatKur = detay.FiyatKur,
                 StokKartVaryantId = detay.StokKartVaryantId,
                 Miktar = detay.Miktar,
@@ -111,9 +114,13 @@ public sealed class FaturaServisi : IFaturaServisi
             });
         }
 
-        siparis.Durum = SiparisDurumu.Tamamlandi;
-        siparis.AktifMi = false;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await CreateSalesStockAsync(fatura, cancellationToken);
 
+        var trackedOrder = await _dbContext.Siparisler.SingleAsync(x => x.Id == siparis.Id, cancellationToken);
+        await _dbContext.Entry(trackedOrder).ReloadAsync(cancellationToken);
+        trackedOrder.Durum = SiparisDurumu.Tamamlandi;
+        trackedOrder.AktifMi = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await _outboxServisi.OlayEkleAsync(new OutboxOlayEkleRequestDto
@@ -152,6 +159,7 @@ public sealed class FaturaServisi : IFaturaServisi
         return new FaturaDto
         {
             Id = fatura.Id,
+            DepoId = fatura.DepoId,
             FaturaNo = fatura.FaturaNo,
             SiparisId = fatura.SiparisId,
             CariId = fatura.CariId,
@@ -224,7 +232,7 @@ WHERE TenantId = @TenantId
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
-            ? @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
+            ? @"SELECT Id, DepoId, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -232,7 +240,7 @@ WHERE TenantId = @TenantId
   AND (@Durum IS NULL OR Durum = @Durum)
 ORDER BY Id DESC
 LIMIT @Take OFFSET @Skip;"
-            : @"SELECT Id, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
+            : @"SELECT Id, DepoId, FaturaNo, SiparisId, ParaBirimKodu, Kur, AraToplam, GenelIndirimTutari, NetToplam, OdenenTutar, KalanTutar, ToplamTutar, Durum, KapanisTarihi
 FROM Fatura
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
@@ -282,6 +290,8 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     public async Task<FaturaDto> FaturaIptalAsync(long id, FaturaIptalRequestDto? request = null, CancellationToken cancellationToken = default)
     {
+        if (await _dbContext.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.FaturaId == id, cancellationToken))
+            throw new UygulamaHatasi(409, "Fatura iptal edilemedi", "Stok cikisi bulunan fatura icin ters stok hareketi gereklidir.", "sales_stock_reversal_required");
         var fatura = await _dbContext.Faturalar.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
 

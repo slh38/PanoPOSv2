@@ -440,6 +440,7 @@ public sealed class TahsilatServisiTests : IDisposable
     {
         var fatura = new Fatura
         {
+            DepoId = 1,
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
             FaturaNo = faturaNo ?? $"FTR-{Guid.NewGuid():N}"[..20],

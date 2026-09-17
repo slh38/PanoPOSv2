@@ -146,6 +146,14 @@ public sealed class SiparisServisi : ISiparisServisi
             birim = await _dbContext.StokKartSatisBirimleri.SingleOrDefaultAsync(x => x.Id == request.StokKartSatisBirimiId &&
                 x.StokKartId == urun.Id && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
                 ?? throw new UygulamaHatasi(400, "Gecersiz birim", "Satis birimi bulunamadi.", "sales_unit_invalid");
+        else
+        {
+            var varsayilanlar = await _dbContext.StokKartSatisBirimleri.Where(x => x.StokKartId == urun.Id &&
+                x.TenantId == siparis.TenantId && x.AktifMi && x.VarsayilanMi).Take(2).ToListAsync(cancellationToken);
+            if (varsayilanlar.Count > 1)
+                throw new UygulamaHatasi(400, "Gecersiz birim", "Birden fazla varsayilan satis birimi var.", "sales_unit_invalid");
+            birim = varsayilanlar.SingleOrDefault();
+        }
         var fiyatParaBirimi = (request.FiyatParaBirimKodu ?? siparis.ParaBirimKodu).Trim().ToUpperInvariant();
         var fiyatKur = fiyatParaBirimi == "TRY" ? 1m : request.FiyatKur ?? siparis.Kur;
         if (fiyatParaBirimi.Length is < 1 or > 10 || fiyatKur <= 0)
@@ -158,7 +166,7 @@ public sealed class SiparisServisi : ISiparisServisi
             SiparisId = siparis.Id,
             StokKartId = request.StokKartId,
             KdvId = kdv.Id, KdvOrani = kdv.Oran, KdvDahilMi = siparis.KdvDahilMi,
-            StokKartSatisBirimiId = birim?.Id, BirimAdi = birim?.BirimAdi, BirimKatsayi = birim?.Katsayi,
+            StokKartSatisBirimiId = birim?.Id, BirimKodu = birim?.BirimKodu, BirimAdi = birim?.BirimAdi, BirimKatsayi = birim?.Katsayi,
             FiyatParaBirimKodu = fiyatParaBirimi, FiyatKur = fiyatKur,
             StokKartVaryantId = request.StokKartVaryantId,
             Miktar = request.Miktar,

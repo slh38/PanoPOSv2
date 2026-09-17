@@ -5,6 +5,7 @@ namespace PanoPos.Application.Invoice;
 public sealed class FaturaListeItemDto
 {
     public long Id { get; set; }
+    public long DepoId { get; set; }
     public string FaturaNo { get; set; } = string.Empty;
     public long? SiparisId { get; set; }
     public string ParaBirimKodu { get; set; } = string.Empty;

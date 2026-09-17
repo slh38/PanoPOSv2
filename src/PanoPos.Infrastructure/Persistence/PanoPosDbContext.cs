@@ -111,6 +111,23 @@ public sealed class PanoPosDbContext : DbContext
     private void ApplyEntityRules()
     {
         var utcNow = DateTime.UtcNow;
+        foreach (var entry in ChangeTracker.Entries<Fatura>())
+        {
+            var changesStock = entry.State == EntityState.Deleted ||
+                (entry.State == EntityState.Modified &&
+                 (entry.Property(x => x.DepoId).IsModified || entry.Property(x => x.TenantId).IsModified ||
+                  entry.Property(x => x.SubeId).IsModified || entry.Property(x => x.SiparisId).IsModified ||
+                  entry.Entity.SilindiMi || entry.Entity.Durum is Domain.Enums.FaturaDurumu.Iptal or Domain.Enums.FaturaDurumu.Iade));
+            if (changesStock && StokFisleri.IgnoreQueryFilters().Any(x => x.FaturaId == entry.Entity.Id))
+                throw new InvalidOperationException("Stoklanmis fatura ters stok hareketi olmadan degistirilemez.");
+        }
+        foreach (var entry in ChangeTracker.Entries<FaturaDetay>()
+                     .Where(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            var originalInvoiceId = entry.State == EntityState.Added ? entry.Entity.FaturaId : entry.OriginalValues.GetValue<long>(nameof(FaturaDetay.FaturaId));
+            if (StokFisleri.IgnoreQueryFilters().Any(x => x.FaturaId == entry.Entity.FaturaId || x.FaturaId == originalInvoiceId))
+                throw new InvalidOperationException("Stoklanmis fatura detaylari degistirilemez.");
+        }
 
         foreach (var entry in ChangeTracker.Entries()
                      .Where(x => x.Entity is StokHareket or StokFis or StokFisDetay))
