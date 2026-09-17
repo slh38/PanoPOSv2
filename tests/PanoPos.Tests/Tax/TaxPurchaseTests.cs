@@ -40,7 +40,7 @@ public sealed class TaxPurchaseTests : IDisposable
         db.Add(birim); db.SaveChanges();
     }
     private AlisFaturaKaydetRequest Request(decimal price = 100) => new() {
-        SubeId = 1, CariId = cari.Id, FaturaNo = "AL-001", FaturaTarihi = new DateTime(2026,9,16),
+        SubeId = 1, DepoId = 1, CariId = cari.Id, FaturaNo = "AL-001", FaturaTarihi = new DateTime(2026,9,16),
         Detaylar = new() { new() { StokKartId = stok.Id, StokKartSatisBirimiId = birim.Id, Miktar = 10, BirimFiyat = price, IndirimOrani = 10 } }
     };
     private KdvKaydetRequest KdvRequest(decimal oran = 25, string kod = " kdv25 ") => new() { SubeId = 1, Kod = kod, Ad = " Yeni oran ", Oran = oran };
@@ -146,7 +146,7 @@ public sealed class TaxPurchaseTests : IDisposable
         f=await purchase.UpdateAsync(f.Id,r);Assert.Equal(2160,f.NetToplam);Assert.Single(f.Detaylar);Assert.Equal("DUZELT",f.FaturaNo);
         Assert.Equal(2,await db.AlisFaturaDetaylari.IgnoreQueryFilters().CountAsync());
     }
-    [Fact] public async Task Kesinlestirme_idempotent_ve_yan_etkisiz() {
+    [Fact] public async Task Kesinlestirme_idempotent_ve_cari_yan_etkisiz() {
         var f=await purchase.CreateAsync(Request());var hareket=await db.CariHareketleri.CountAsync();
         await purchase.KesinlestirAsync(f.Id,1);f=await purchase.KesinlestirAsync(f.Id,1);
         Assert.Equal(AlisFaturaDurumu.Kesinlesti,f.Durum);Assert.Equal(hareket,await db.CariHareketleri.CountAsync());

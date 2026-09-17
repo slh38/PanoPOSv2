@@ -5,6 +5,7 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class StokFis : BaseEntity
 {
+    public long? AlisFaturaId { get; set; }
     public StokFisTipi StokFisTipi { get; set; }
     public string FisNo { get; set; } = string.Empty;
     public DateTime FisTarihi { get; set; }

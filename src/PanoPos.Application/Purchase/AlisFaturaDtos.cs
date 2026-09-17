@@ -3,6 +3,7 @@ using PanoPos.Domain.Enums;
 namespace PanoPos.Application.Purchase;
 public sealed class AlisFaturaKaydetRequest
 {
+    public long DepoId { get; set; }
     public long SubeId { get; set; }
     public long CariId { get; set; }
     public string FaturaNo { get; set; } = string.Empty;
@@ -29,6 +30,7 @@ public sealed class AlisFaturaSatirRequest
 }
 public class AlisFaturaListeDto
 {
+    public long DepoId { get; set; }
     public long Id { get; set; }
     public long CariId { get; set; }
     public string CariAd { get; set; } = string.Empty;

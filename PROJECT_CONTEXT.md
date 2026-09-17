@@ -940,17 +940,23 @@ Kesinleşmiş belge normal CRUD ile sessizce değiştirilmemelidir.
 İptal/iade stok ve finans entegrasyonları ilerleyen görevlerde ayrıca
 ele alınacaktır.
 
+Stok girişi oluşturulmuş kesinleşmiş alış faturası mevcut iptal
+endpointiyle iptal edilemez; ters stok hareketi gerektiğini belirten
+domain hatası döner. Taslak iptal edilebilir ve stok oluşturmaz.
+
 ---
 
-# 40. ALIŞ FATURASI GELECEK AKIŞI
+# 40. ALIŞ FATURASI STOK AKIŞI
 
-Planlanan akış:
+Mevcut akış:
 
-AlisFatura
+AlisFatura (Taslak)
     ->
-StokFis
+Kesinlestir
     ->
-StokHareket
+StokFis (Alis)
+    ->
+StokFisDetay + StokHareket (+)
 
 şeklindedir.
 
@@ -966,6 +972,20 @@ gerçek stok ledger hareketi
 olarak düşünülür.
 
 Bu katmanlar aynı kavram değildir.
+
+AlisFatura oluşturma/güncelleme isteğinde DepoId açıkça zorunludur.
+Depo aynı Tenant/Sube içinde aktif ve silinmemiş olmalıdır.
+Taslak kayıt ve güncelleme stok üretmez; depo yalnız taslakta değişebilir.
+Kesinleştirme, fiş/detay/hareket ve IslemLog aynı transaction içindedir.
+StokFis.AlisFaturaId nullable FK ve unique filtered index ile
+aynı faturanın ikinci stok fişi oluşturması engellenir.
+SQL Server'da tüm fatura yazma işlemleri aynı fatura satırını
+UPDLOCK/HOLDLOCK ile kilitler. Tekrarlanan kesinleştirme stok/audit
+üretmeden mevcut sonucu döndürür.
+Alış fişi numarası ALIS-{AlisFaturaId}, tarihi FaturaTarihi olur.
+Hareket miktarı fatura detayındaki Miktar * snapshot Katsayi ile
+hesaplanır; master birimin güncel adı/katsayısıyla değiştirilmez.
+KDV/fiyat hesapları yeniden yapılmaz; finansal snapshotlar korunur.
 
 ---
 
@@ -1267,7 +1287,8 @@ Depo Transfer
 Manuel Düzeltme
 
 Mevcut çekirdekte Devir, Sayım ve DepoTransfer uygulanmıştır.
-Alış, satış ve iade tipleri enum seviyesinde bulunur; ticari belge
+Alış faturası kesinleştirmesi Alış stok girişine bağlanmıştır.
+Satış ve iade tipleri enum seviyesinde bulunur; satış/iade
 entegrasyonları ve üretim henüz uygulanmamıştır.
 
 StokFis belgeyi, StokFisDetay birim/katsayı ve miktar snapshotlarını,
@@ -1798,9 +1819,7 @@ Kesinlesti
 
 durumuna alınır.
 
-Mevcut aşamada kesinleşme ticari belge durumunu değiştirir.
-
-Stok entegrasyonu tamamlandığında:
+Kesinleşme ticari belge durumunu değiştirir ve aynı transaction içinde:
 
 AlisFatura
     ->
@@ -1808,11 +1827,13 @@ StokFis
     ->
 StokHareket
 
-oluşacak ve hedef depoya:
+oluşur ve faturada açıkça seçilen hedef depoya:
 
 240 temel birim
 
-stok girişi yapılacaktır.
+stok girişi yapılır. Aynı fatura tekrar kesinleştirilirse ikinci
+stok girişi oluşmaz. Bu stoklanmış faturanın iptal/iade ters hareketi
+henüz uygulanmamıştır; sessiz durum değişikliği engellenir.
 
 ---
 
@@ -1975,7 +1996,6 @@ Aşağıdaki alanların bazıları planlanmıştır ancak tam uygulaması henüz
 yapılmamıştır:
 
 - stok satış çıkışı
-- alış stok girişi
 - satış/alış iade stok entegrasyonu
 - gelişmiş stok bakiye optimizasyonu
 - alış ödeme/borç entegrasyonunun tamamı
@@ -2016,8 +2036,18 @@ mevcut Outbox altyapısı değiştirilmemiştir.
 Stok migration: 20260917080742_AddStockLedgerCore.
 PanoPosDb database update başarılı; 42 yeni SQLite stok testi ile
 toplam 193/193 test başarılıdır. Solution build başarılıdır.
-AlisFatura/Fatura otomatik stok bağlantısı, StokBakiye ve Desktop
-değişikliği bu aşamada yoktur.
+Fatura satış stok bağlantısı, StokBakiye ve Desktop değişikliği yoktur.
+
+Alış stok entegrasyonu migration:
+20260917084513_LinkPurchaseInvoiceToStockLedger.
+PanoPosDb database update başarılıdır. 24 yeni SQLite testi ile
+toplam 217/217 test başarılı; solution build başarılıdır.
+POST/PUT /api/v1/alis-fatura sözleşmesinde DepoId zorunludur;
+liste/detay cevapları DepoId, stok fişi cevapları AlisFaturaId içerir.
+POST /api/v1/alis-fatura/{id}/kesinlestir stok üretir.
+Stoklanmış faturanın iptal isteği purchase_stock_reversal_required
+hatasıyla reddedilir. Cari/ödeme entegrasyonu ve Outbox event'i
+eklenmemiştir; mevcut stok çekirdeği gibi IslemLog kullanılır.
 
 ---
 

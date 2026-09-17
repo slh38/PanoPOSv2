@@ -8,7 +8,7 @@ using PanoPos.Domain.Enums;
 using PanoPos.Infrastructure.Persistence;
 namespace PanoPos.Infrastructure.Purchase;
 
-public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServisi vergi) : IAlisFaturaServisi
+public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServisi vergi) : IAlisFaturaServisi
 {
     public async Task<AlisFaturaDto> CreateAsync(AlisFaturaKaydetRequest r, CancellationToken ct = default)
     {
@@ -25,6 +25,7 @@ public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServis
     public async Task<AlisFaturaDto> UpdateAsync(long id, AlisFaturaKaydetRequest r, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockInvoiceAsync(id, r.SubeId, ct);
         var f = await FindAsync(id, r.SubeId, ct);
         EnsureDraft(f);
         await ApplyAsync(f, r, ct);
@@ -34,6 +35,7 @@ public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServis
     }
     private async Task ApplyAsync(AlisFatura f, AlisFaturaKaydetRequest r, CancellationToken ct)
     {
+        await ValidateDepoAsync(f.TenantId, f.SubeId, r.DepoId, ct);
         if (string.IsNullOrWhiteSpace(r.FaturaNo) || r.FaturaNo.Trim().Length > 50 ||
             r.FaturaTarihi == default || r.Detaylar is null || r.Detaylar.Count == 0 ||
             r.Aciklama?.Length > 500 || (r.GenelIndirimOrani.HasValue && r.GenelIndirimTutari.HasValue))
@@ -97,6 +99,7 @@ public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServis
             if (line.Id == 0) f.Detaylar.Add(line);
         }
         foreach (var old in eski.Values.Where(x => !used.Contains(x.Id))) db.AlisFaturaDetaylari.Remove(old);
+        f.DepoId = r.DepoId;
         f.CariId = r.CariId; f.FaturaNo = r.FaturaNo.Trim(); f.FaturaTarihi = r.FaturaTarihi;
         f.Aciklama = r.Aciklama?.Trim(); f.ParaBirimKodu = currency; f.Kur = rate;
         f.GenelIndirimOrani = r.GenelIndirimOrani; f.GenelIndirimTutari = sonuc.GenelIndirimTutari;
@@ -107,6 +110,7 @@ public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServis
     public async Task DeleteAsync(long id, long subeId, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockInvoiceAsync(id, subeId, ct);
         var f = await FindAsync(id, subeId, ct);
         EnsureDraft(f);
         db.AlisFaturaDetaylari.RemoveRange(f.Detaylar.Where(x => !x.SilindiMi));
@@ -117,22 +121,32 @@ public sealed class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServis
     public async Task<AlisFaturaDto> KesinlestirAsync(long id, long subeId, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockInvoiceAsync(id, subeId, ct);
         var f = await FindAsync(id, subeId, ct);
+        var hasStock = await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct);
         if (f.Durum != AlisFaturaDurumu.Kesinlesti)
         {
             EnsureDraft(f);
+            if (hasStock) throw Error("Bu faturanin stok fisi zaten mevcut; tekrar stok uretilemez.");
             if (!f.Detaylar.Any(x => !x.SilindiMi)) throw Error("Detaysiz fatura kesinlestirilemez.");
+            await CreatePurchaseStockAsync(f, ct);
             f.Durum = AlisFaturaDurumu.Kesinlesti;
             await db.SaveChangesAsync(ct);
         }
+        else if (!hasStock)
+            throw Error("Kesinlesmis faturanin stok fisi eksik; otomatik tekrar stok uretilemez.");
         await tx.CommitAsync(ct);
         return Map(f);
     }
     public async Task<AlisFaturaDto> IptalAsync(long id, long subeId, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockInvoiceAsync(id, subeId, ct);
         var f = await FindAsync(id, subeId, ct);
-        // TODO: Stock integration must define reversal/return rules for finalized invoices.
+        if (await db.StokFisleri.IgnoreQueryFilters().AnyAsync(x => x.AlisFaturaId == f.Id, ct))
+            throw new UygulamaHatasi(409, "Stoklanmis fatura iptal edilemez",
+                "Stok girisi yapilmis alis faturasi ters hareket olmadan iptal edilemez.", "purchase_stock_reversal_required");
+        // TODO: Purchase returns/reversals require a separate domain operation.
         f.Durum = AlisFaturaDurumu.Iptal;
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -154,7 +168,7 @@ AND (@Search IS NULL OR f.FaturaNo LIKE @Search OR c.CariKodu LIKE @Search OR c.
         var conn = db.Database.GetDbConnection();
         var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition("SELECT COUNT(1)" + where, args, cancellationToken: ct));
         var rows = await conn.QueryAsync<AlisFaturaListeDto>(new CommandDefinition(
-            "SELECT f.Id, f.CariId, c.Ad AS CariAd, f.FaturaNo, f.FaturaTarihi, f.ParaBirimKodu, f.Kur, f.AraToplam, f.GenelIndirimOrani, f.GenelIndirimTutari, f.ToplamMatrah, f.ToplamKdv, f.NetToplam, f.Durum" +
+            "SELECT f.Id, f.DepoId, f.CariId, c.Ad AS CariAd, f.FaturaNo, f.FaturaTarihi, f.ParaBirimKodu, f.Kur, f.AraToplam, f.GenelIndirimOrani, f.GenelIndirimTutari, f.ToplamMatrah, f.ToplamKdv, f.NetToplam, f.Durum" +
             where + " ORDER BY f.Id DESC" + paging, args, cancellationToken: ct));
         return new() { Kayitlar = rows.ToList(), ToplamKayit = count, Sayfa = r.Page, SayfaBoyutu = r.PageSize };
     }
@@ -182,7 +196,7 @@ AND (@Search IS NULL OR f.FaturaNo LIKE @Search OR c.CariKodu LIKE @Search OR c.
     private static UygulamaHatasi Error(string message) => new(400, "Alis faturasi hatasi", message, "purchase_invalid");
     private static AlisFaturaDto Map(AlisFatura f) => new()
     {
-        Id = f.Id, CariId = f.CariId, CariAd = f.Cari.Ad, FaturaNo = f.FaturaNo, FaturaTarihi = f.FaturaTarihi,
+        Id = f.Id, DepoId = f.DepoId, CariId = f.CariId, CariAd = f.Cari.Ad, FaturaNo = f.FaturaNo, FaturaTarihi = f.FaturaTarihi,
         ParaBirimKodu = f.ParaBirimKodu, Kur = f.Kur, KdvDahilMi = f.KdvDahilMi, Aciklama = f.Aciklama,
         AraToplam = f.AraToplam, GenelIndirimOrani = f.GenelIndirimOrani, GenelIndirimTutari = f.GenelIndirimTutari,
         ToplamMatrah = f.ToplamMatrah, ToplamKdv = f.ToplamKdv, NetToplam = f.NetToplam, Durum = f.Durum,

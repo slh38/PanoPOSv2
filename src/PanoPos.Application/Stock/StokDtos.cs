@@ -27,6 +27,7 @@ public sealed class StokFisSatirRequest
 
 public class StokFisListeDto
 {
+    public long? AlisFaturaId { get; set; }
     public long Id { get; set; }
     public StokFisTipi StokFisTipi { get; set; }
     public string FisNo { get; set; } = string.Empty;

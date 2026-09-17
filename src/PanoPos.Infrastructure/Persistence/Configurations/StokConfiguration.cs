@@ -12,6 +12,10 @@ public sealed class StokFisConfiguration : IEntityTypeConfiguration<StokFis>
             "([StokFisTipi] = 7 AND [DepoId] IS NULL AND [KaynakDepoId] IS NOT NULL AND [HedefDepoId] IS NOT NULL AND [KaynakDepoId] <> [HedefDepoId]) OR " +
             "([StokFisTipi] <> 7 AND [DepoId] IS NOT NULL AND [KaynakDepoId] IS NULL AND [HedefDepoId] IS NULL)"));
         PanoPosDbContext.ConfigureBaseEntity(b);
+        b.HasOne<AlisFatura>().WithMany().HasForeignKey(x => x.AlisFaturaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(x => x.AlisFaturaId).IsUnique().HasFilter("[AlisFaturaId] IS NOT NULL");
+        b.ToTable("StokFis", t => t.HasCheckConstraint("CK_StokFis_AlisFatura",
+            "[AlisFaturaId] IS NULL OR [StokFisTipi] = 1"));
         b.Property(x => x.FisNo).HasMaxLength(50).IsRequired();
         b.Property(x => x.Aciklama).HasMaxLength(500);
         b.HasIndex(x => new { x.TenantId, x.FisNo }).IsUnique();
@@ -51,7 +55,7 @@ public sealed class StokHareketConfiguration : IEntityTypeConfiguration<StokHare
     public void Configure(EntityTypeBuilder<StokHareket> b)
     {
         b.ToTable("StokHareket", t => t.HasCheckConstraint("CK_StokHareket_Miktar",
-            "[Miktar] <> 0 AND ([StokHareketTipi] <> 3 OR [Miktar] < 0) AND ([StokHareketTipi] NOT IN (1,4) OR [Miktar] > 0)"));
+            "[Miktar] <> 0 AND ([StokHareketTipi] <> 3 OR [Miktar] < 0) AND ([StokHareketTipi] NOT IN (1,4,5) OR [Miktar] > 0)"));
         b.HasKey(x => x.Id);
         b.Property(x => x.Miktar).HasPrecision(18, 4);
         b.Property(x => x.Aciklama).HasMaxLength(500);

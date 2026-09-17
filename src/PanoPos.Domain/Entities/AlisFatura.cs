@@ -3,6 +3,7 @@ using PanoPos.Domain.Enums;
 namespace PanoPos.Domain.Entities;
 public sealed class AlisFatura : BaseEntity
 {
+    public long DepoId { get; set; }
     public long CariId { get; set; }
     public string FaturaNo { get; set; } = string.Empty;
     public DateTime FaturaTarihi { get; set; }

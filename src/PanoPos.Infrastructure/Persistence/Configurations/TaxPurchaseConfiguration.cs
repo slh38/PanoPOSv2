@@ -41,6 +41,7 @@ public sealed class AlisFaturaConfiguration : IEntityTypeConfiguration<AlisFatur
     {
         b.ToTable("AlisFatura");
         PanoPosDbContext.ConfigureBaseEntity(b);
+        b.HasOne<Depo>().WithMany().HasForeignKey(x => x.DepoId).OnDelete(DeleteBehavior.Restrict);
         b.Property(x => x.FaturaNo).HasMaxLength(50).IsRequired();
         b.Property(x => x.Aciklama).HasMaxLength(500);
         b.Property(x => x.ParaBirimKodu).HasMaxLength(10).IsRequired();
