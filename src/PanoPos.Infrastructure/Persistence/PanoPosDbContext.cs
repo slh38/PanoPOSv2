@@ -19,6 +19,9 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<AlisFatura> AlisFaturalar => Set<AlisFatura>();
     public DbSet<AlisFaturaDetay> AlisFaturaDetaylari => Set<AlisFaturaDetay>();
     public DbSet<Depo> Depolar => Set<Depo>();
+    public DbSet<StokFis> StokFisleri => Set<StokFis>();
+    public DbSet<StokFisDetay> StokFisDetaylari => Set<StokFisDetay>();
+    public DbSet<StokHareket> StokHareketleri => Set<StokHareket>();
     public DbSet<Sube> Subeler => Set<Sube>();
     public DbSet<Cihaz> Cihazlar => Set<Cihaz>();
     public DbSet<Kasa> Kasalar => Set<Kasa>();
@@ -109,6 +112,15 @@ public sealed class PanoPosDbContext : DbContext
     {
         var utcNow = DateTime.UtcNow;
 
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(x => x.Entity is StokHareket or StokFis or StokFisDetay))
+        {
+            if (entry.State is EntityState.Modified or EntityState.Deleted)
+                throw new InvalidOperationException("Kaydedilmis stok belgeleri ve hareketleri degistirilemez.");
+            if (entry.State == EntityState.Added && entry.Entity is StokHareket hareket)
+                hareket.OlusturmaTarihi = utcNow;
+        }
+
         foreach (var logEntry in ChangeTracker.Entries<IslemLog>())
         {
             if (logEntry.State == EntityState.Added && logEntry.Entity.OlusturmaTarihi == default)
@@ -167,3 +179,4 @@ public sealed class PanoPosDbContext : DbContext
         modelBuilder.Entity<FiyatTipi>().HasData(SystemSeedData.FiyatTipleri);
     }
 }
+
