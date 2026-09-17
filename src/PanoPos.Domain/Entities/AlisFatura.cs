@@ -18,6 +18,6 @@ public sealed class AlisFatura : BaseEntity
     public decimal NetToplam { get; set; }
     public AlisFaturaDurumu Durum { get; set; }
     public string? Aciklama { get; set; }
-    public Cari Cari { get; set; } = null!;
+    public CariKart CariKart { get; set; } = null!;
     public ICollection<AlisFaturaDetay> Detaylar { get; set; } = new List<AlisFaturaDetay>();
 }

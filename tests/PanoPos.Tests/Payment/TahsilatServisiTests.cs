@@ -90,7 +90,7 @@ public sealed class TahsilatServisiTests : IDisposable
     [Fact]
     public async Task Veresiye_tahsilat_basarili_ve_cari_hareket_olusur()
     {
-        var cari = await CariEkleAsync();
+        var cari = await CariKartEkleAsync();
         var fatura = await FaturaEkleAsync(cariId: cari.Id, netToplam: 250m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
@@ -326,7 +326,7 @@ public sealed class TahsilatServisiTests : IDisposable
     public async Task Veresiye_ve_nakit_kombinasyonu_calisir()
     {
         var kasa = await KasaEkleAsync();
-        var cari = await CariEkleAsync();
+        var cari = await CariKartEkleAsync();
         var fatura = await FaturaEkleAsync(netToplam: 1000m, cariId: cari.Id);
 
         var veresiyeTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
@@ -496,9 +496,9 @@ public sealed class TahsilatServisiTests : IDisposable
         return banka;
     }
 
-    private async Task<Cari> CariEkleAsync()
+    private async Task<CariKart> CariKartEkleAsync()
     {
-        var cari = new Cari
+        var cari = new CariKart
         {
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
@@ -509,7 +509,7 @@ public sealed class TahsilatServisiTests : IDisposable
             SilindiMi = false
         };
 
-        _dbContext.Cariler.Add(cari);
+        _dbContext.CariKartlar.Add(cari);
         await _dbContext.SaveChangesAsync();
         return cari;
     }

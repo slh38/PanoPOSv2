@@ -8,13 +8,13 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Tests.Customer;
 
-public sealed class CariServisiTests : IDisposable
+public sealed class CariKartServisiTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly PanoPosDbContext _dbContext;
-    private readonly CariServisi _cariServisi;
+    private readonly CariKartServisi _cariKartServisi;
 
-    public CariServisiTests()
+    public CariKartServisiTests()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
@@ -27,13 +27,13 @@ public sealed class CariServisiTests : IDisposable
         _dbContext.Database.EnsureDeleted();
         _dbContext.Database.EnsureCreated();
 
-        _cariServisi = new CariServisi(_dbContext);
+        _cariKartServisi = new CariKartServisi(_dbContext);
     }
 
     [Fact]
-    public async Task Cari_eklenir()
+    public async Task CariKart_eklenir()
     {
-        var cari = await _cariServisi.CariOlusturAsync(new CariOlusturRequestDto
+        var cari = await _cariKartServisi.CariKartOlusturAsync(new CariKartOlusturRequestDto
         {
             SubeId = 1,
             CariKodu = "CR-001",
@@ -50,21 +50,21 @@ public sealed class CariServisiTests : IDisposable
     [Fact]
     public async Task Duplicate_kontrolu_calisir()
     {
-        await CariEkleAsync("CR-002", "Ilk Cari");
+        await CariKartEkleAsync("CR-002", "Ilk Cari");
 
-        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => CariEkleAsync("CR-002", "Ikinci Cari"));
+        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => CariKartEkleAsync("CR-002", "Ikinci Cari"));
 
-        Assert.Equal("cari_kodu_duplicate", ex.ErrorCode);
+        Assert.Equal("cari_kart_kodu_duplicate", ex.ErrorCode);
     }
 
     [Fact]
     public async Task Liste_sayfali_doner()
     {
-        await CariEkleAsync("CR-101", "Zeta");
-        await CariEkleAsync("CR-102", "Beta");
-        await CariEkleAsync("CR-103", "Alfa");
+        await CariKartEkleAsync("CR-101", "Zeta");
+        await CariKartEkleAsync("CR-102", "Beta");
+        await CariKartEkleAsync("CR-103", "Alfa");
 
-        var sayfa = await _cariServisi.CariListeleAsync(1, null, 2, 2);
+        var sayfa = await _cariKartServisi.CariKartListeleAsync(1, null, 2, 2);
 
         Assert.Equal(3, sayfa.ToplamKayit);
         Assert.Equal(2, sayfa.Sayfa);
@@ -75,19 +75,19 @@ public sealed class CariServisiTests : IDisposable
     [Fact]
     public async Task Soft_delete_filtre_calisir()
     {
-        var cari = await CariEkleAsync("CR-201", "Silinecek Cari");
-        var entity = await _dbContext.Cariler.IgnoreQueryFilters().SingleAsync(x => x.Id == cari.Id);
+        var cari = await CariKartEkleAsync("CR-201", "Silinecek Cari");
+        var entity = await _dbContext.CariKartlar.IgnoreQueryFilters().SingleAsync(x => x.Id == cari.Id);
         entity.SoftDelete(null, DateTime.UtcNow);
         await _dbContext.SaveChangesAsync();
 
-        var sayfa = await _cariServisi.CariListeleAsync(1, null, 1, 20);
+        var sayfa = await _cariKartServisi.CariKartListeleAsync(1, null, 1, 20);
 
         Assert.DoesNotContain(sayfa.Kayitlar, x => x.Id == cari.Id);
     }
 
-    private Task<CariDto> CariEkleAsync(string kod, string ad)
+    private Task<CariKartDto> CariKartEkleAsync(string kod, string ad)
     {
-        return _cariServisi.CariOlusturAsync(new CariOlusturRequestDto
+        return _cariKartServisi.CariKartOlusturAsync(new CariKartOlusturRequestDto
         {
             SubeId = 1,
             CariKodu = kod,

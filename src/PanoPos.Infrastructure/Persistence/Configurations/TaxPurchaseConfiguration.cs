@@ -51,7 +51,7 @@ public sealed class AlisFaturaConfiguration : IEntityTypeConfiguration<AlisFatur
         b.Property(x => x.GenelIndirimOrani).HasPrecision(5, 2);
         foreach (var name in new[] { "AraToplam", "GenelIndirimTutari", "ToplamMatrah", "ToplamKdv", "NetToplam" })
             b.Property<decimal>(name).HasPrecision(18, 2);
-        b.HasOne(x => x.Cari).WithMany().HasForeignKey(x => x.CariId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.CariKart).WithMany().HasForeignKey(x => x.CariId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Sube>().WithMany().HasForeignKey(x => x.SubeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).HasPrincipalKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.TenantId, x.SubeId, x.FaturaTarihi });

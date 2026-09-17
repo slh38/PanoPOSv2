@@ -30,7 +30,7 @@ public sealed class SiparisConfiguration : IEntityTypeConfiguration<Siparis>
             .HasForeignKey(x => x.AdisyonId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.Cari)
+        builder.HasOne(x => x.CariKart)
             .WithMany()
             .HasForeignKey(x => x.CariId)
             .OnDelete(DeleteBehavior.Restrict);

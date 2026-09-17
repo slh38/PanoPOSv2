@@ -19,7 +19,7 @@ public sealed class CariHareketConfiguration : IEntityTypeConfiguration<CariHare
         builder.Property(x => x.HareketTarihi).IsRequired();
         builder.Property(x => x.Aciklama).HasMaxLength(500);
 
-        builder.HasOne(x => x.Cari)
+        builder.HasOne(x => x.CariKart)
             .WithMany()
             .HasForeignKey(x => x.CariId)
             .OnDelete(DeleteBehavior.Restrict);

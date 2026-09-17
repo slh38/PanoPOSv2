@@ -302,7 +302,7 @@ public sealed class SalesStockTests : IDisposable
 
     [Fact] public async Task Veresiye_stok_hareketini_cogaltmaz()
     {
-        var cari = new Cari { TenantId = tenant, SubeId = 1, CariKodu = "A1", Ad = "Alici", Tip = CariTipi.Alici };
+        var cari = new CariKart { TenantId = tenant, SubeId = 1, CariKodu = "A1", Ad = "Alici", Tip = CariTipi.Alici };
         db.Add(cari); await db.SaveChangesAsync();
         var f = await Invoice(await Order(cari: cari.Id));
         await new TahsilatServisi(db).TahsilatOlusturAsync(new() { SubeId = 1, FaturaId = f.Id,

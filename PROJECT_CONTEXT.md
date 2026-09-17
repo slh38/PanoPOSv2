@@ -854,9 +854,9 @@ Bu yapı Cari borç/alacak takibinin temelidir.
 
 ---
 
-# 36. CARİ
+# 36. CARİ KART
 
-Cari:
+CariKart:
 
 - müşteri
 - tedarikçi
@@ -873,7 +873,7 @@ Satici
 Personel
 Masraf
 
-Bir Cari'nin gelecekte hem müşteri hem tedarikçi gibi davranabilmesi
+Bir CariKart'ın gelecekte hem müşteri hem tedarikçi gibi davranabilmesi
 engellenmemelidir.
 
 ---
@@ -941,7 +941,7 @@ AlisFatura tedarikçiden yapılan ticari alışın belgesidir.
 
 AlisFatura:
 
-Cari
+CariKart
 
 ile ilişkilidir.
 
@@ -1995,7 +1995,7 @@ Projede şu ana kadar temel olarak oluşturulmuş alanlar arasında:
 - StokKartFiyat
 - Kdv
 - TenantAyar
-- Cari
+- CariKart
 - Masa
 - MasaGrup
 - Adisyon
@@ -2142,6 +2142,8 @@ StokHareket = stok ledger kaydı
 Tahsilat = alınan ödeme
 
 KasaHareket = fiziksel kasa hareketi
+
+CariKart = ana ticari hesap kartı
 
 CariHareket = cari borç/alacak hareketi
 
@@ -2320,3 +2322,33 @@ mevcut şemayla uyumludur; sorgu davranışı değiştirilmemiştir.
 Refactor öncesi ve sonrası 301/301 test başarılıdır. Solution build başarılı;
 mevcut Desktop WindowsBase uyarısı devam etmektedir. Cari alanı ve kullanıcı
 dosyaları değiştirilmemiştir.
+
+---
+
+# 87. CARİ KART TEKNİK TERMİNOLOJİSİ
+
+Ana ticari hesap entity ve tablosu CariKart'tır. Ana CRUD sınıfları
+CariKartController, ICariKartServisi / CariKartServisi ve CariKart DTO/request
+gruplarıdır. DbContext ana kart kümesi CariKartlar olarak adlandırılır.
+Navigation alanları CariKart'tır; mevcut CariKodu ve CariAd alanları korunur.
+
+CariId bilinçli olarak değişmemiştir. AlisFatura, Fatura, Siparis ve
+CariHareket üzerindeki CariId FK'leri CariKart.Id'ye bağlanır.
+CariTipi, CariHareket ve CariHareketTipi ayrı domain kavramları olarak
+aynı isim ve davranışla devam eder. CariKart ana kartı, CariHareket
+borç/alacak hareketini temsil eder.
+
+Ana kart API'si GET/POST /api/v1/carikart ve GET/PUT /api/v1/carikart/{id}
+yollarını kullanır. Eski ana kart yolu için alias yoktur. Dapper sorguları
+CariKart tablosunu kullanır; pagination, arama ve kapsam filtreleri korunur.
+Ana kart hata kodları cari_kart_ önekini kullanır; doğal dil mesajları korunur.
+
+Migration: 20260917105621_RenameCariToCariKart. Yalnızca tablo/index/PK
+adları ve FK hedefleri değiştirilmiştir; CariId kolonları değiştirilmemiş,
+tablo silinmemiş ve veritabanı sıfırlanmamıştır. Down ters rename uygular.
+PanoPosDb database update başarılıdır. Tarihsel migrationlar korunmuştur.
+
+Refactor öncesi ve sonrası 301/301 test başarılıdır. Solution build başarılı;
+mevcut Desktop WindowsBase uyarısı devam etmektedir. Swagger sözleşmesi ve
+SQL Server üzerindeki yeni Dapper liste çağrısı doğrulanmıştır. Desktop,
+appsettings.json ve CODEX_RULES.md bu görevde değiştirilmemiştir.

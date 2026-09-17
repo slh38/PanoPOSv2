@@ -25,7 +25,7 @@ public sealed class StokMaliyetTests : IDisposable
     private readonly StokMaliyetServisi costs;
     private readonly StokKart stock;
     private readonly StokKartSatisBirimi unit;
-    private readonly Cari supplier;
+    private readonly CariKart supplier;
     private readonly Guid tenant = SystemSeedData.TenantGuid;
 
     public StokMaliyetTests()

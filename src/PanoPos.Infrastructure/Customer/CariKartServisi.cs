@@ -7,23 +7,23 @@ using PanoPos.Infrastructure.Persistence;
 
 namespace PanoPos.Infrastructure.Customer;
 
-public sealed class CariServisi : ICariServisi
+public sealed class CariKartServisi : ICariKartServisi
 {
     private readonly PanoPosDbContext _dbContext;
 
-    public CariServisi(PanoPosDbContext dbContext)
+    public CariKartServisi(PanoPosDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<CariDto> CariOlusturAsync(CariOlusturRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<CariKartDto> CariKartOlusturAsync(CariKartOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
         ValidateRequest(request.SubeId, request.Ad);
 
         var sube = await GetSubeAsync(request.SubeId, cancellationToken);
         await CariKoduTekrarKontroluAsync(sube.TenantId, request.CariKodu, null, cancellationToken);
 
-        var cari = new Cari
+        var cari = new CariKart
         {
             TenantId = sube.TenantId,
             SubeId = sube.Id,
@@ -37,18 +37,18 @@ public sealed class CariServisi : ICariServisi
             SilindiMi = false
         };
 
-        _dbContext.Cariler.Add(cari);
+        _dbContext.CariKartlar.Add(cari);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await CariGetirAsync(cari.Id, cari.SubeId, cancellationToken);
+        return await CariKartGetirAsync(cari.Id, cari.SubeId, cancellationToken);
     }
 
-    public async Task<CariDto> CariGuncelleAsync(long id, CariGuncelleRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<CariKartDto> CariKartGuncelleAsync(long id, CariKartGuncelleRequestDto request, CancellationToken cancellationToken = default)
     {
         ValidateRequest(request.SubeId, request.Ad);
 
-        var cari = await _dbContext.Cariler.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == request.SubeId, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_not_found");
+        var cari = await _dbContext.CariKartlar.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == request.SubeId, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
 
         await CariKoduTekrarKontroluAsync(cari.TenantId, request.CariKodu, cari.Id, cancellationToken);
 
@@ -61,23 +61,23 @@ public sealed class CariServisi : ICariServisi
         cari.AktifMi = request.AktifMi;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return await CariGetirAsync(cari.Id, cari.SubeId, cancellationToken);
+        return await CariKartGetirAsync(cari.Id, cari.SubeId, cancellationToken);
     }
 
-    public async Task<CariDto> CariGetirAsync(long id, long subeId, CancellationToken cancellationToken = default)
+    public async Task<CariKartDto> CariKartGetirAsync(long id, long subeId, CancellationToken cancellationToken = default)
     {
         if (subeId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        var cari = await _dbContext.Cariler.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_not_found");
+        var cari = await _dbContext.CariKartlar.SingleOrDefaultAsync(x => x.Id == id && x.SubeId == subeId, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
 
         return MapDto(cari);
     }
 
-    public async Task<SayfaliSonucDto<CariListeItemDto>> CariListeleAsync(long subeId, string? search, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<SayfaliSonucDto<CariKartListeItemDto>> CariKartListeleAsync(long subeId, string? search, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         if (subeId <= 0)
         {
@@ -107,7 +107,7 @@ public sealed class CariServisi : ICariServisi
 
         var pattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
         var countSql = @"SELECT COUNT(1)
-FROM Cari
+FROM CariKart
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
   AND SilindiMi = 0
@@ -116,7 +116,7 @@ WHERE TenantId = @TenantId
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
             ? @"SELECT Id, CariKodu, Ad, Tip, Telefon, AktifMi
-FROM Cari
+FROM CariKart
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
   AND SilindiMi = 0
@@ -124,7 +124,7 @@ WHERE TenantId = @TenantId
 ORDER BY Ad
 LIMIT @Take OFFSET @Skip;"
             : @"SELECT Id, CariKodu, Ad, Tip, Telefon, AktifMi
-FROM Cari
+FROM CariKart
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
   AND SilindiMi = 0
@@ -142,9 +142,9 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         };
 
         var toplamKayit = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: cancellationToken));
-        var kayitlar = (await connection.QueryAsync<CariListeItemDto>(new CommandDefinition(listSql, parameters, cancellationToken: cancellationToken))).ToList();
+        var kayitlar = (await connection.QueryAsync<CariKartListeItemDto>(new CommandDefinition(listSql, parameters, cancellationToken: cancellationToken))).ToList();
 
-        return new SayfaliSonucDto<CariListeItemDto>
+        return new SayfaliSonucDto<CariKartListeItemDto>
         {
             ToplamKayit = toplamKayit,
             Sayfa = page,
@@ -167,19 +167,19 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             return;
         }
 
-        var exists = await _dbContext.Cariler.AnyAsync(
+        var exists = await _dbContext.CariKartlar.AnyAsync(
             x => x.TenantId == tenantId && x.CariKodu == normalized && (!cariId.HasValue || x.Id != cariId.Value),
             cancellationToken);
 
         if (exists)
         {
-            throw new UygulamaHatasi(409, "Cari hatasi", "Ayni tenant icinde CariKodu tekrar edemez.", "cari_kodu_duplicate");
+            throw new UygulamaHatasi(409, "Cari hatasi", "Ayni tenant icinde CariKodu tekrar edemez.", "cari_kart_kodu_duplicate");
         }
     }
 
-    private static CariDto MapDto(Cari cari)
+    private static CariKartDto MapDto(CariKart cari)
     {
-        return new CariDto
+        return new CariKartDto
         {
             Id = cari.Id,
             SubeId = cari.SubeId,
@@ -202,7 +202,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
         if (string.IsNullOrWhiteSpace(ad))
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "Cari adi bos olamaz.", "cari_ad_required");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "Cari adi bos olamaz.", "cari_kart_ad_required");
         }
     }
 

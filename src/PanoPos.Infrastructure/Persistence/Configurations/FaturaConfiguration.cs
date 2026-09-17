@@ -32,7 +32,7 @@ public sealed class FaturaConfiguration : IEntityTypeConfiguration<Fatura>
             .HasForeignKey(x => x.SiparisId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.Cari)
+        builder.HasOne(x => x.CariKart)
             .WithMany()
             .HasForeignKey(x => x.CariId)
             .OnDelete(DeleteBehavior.Restrict);

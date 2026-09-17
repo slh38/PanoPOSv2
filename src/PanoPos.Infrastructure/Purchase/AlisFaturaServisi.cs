@@ -41,7 +41,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
             r.FaturaTarihi == default || r.Detaylar is null || r.Detaylar.Count == 0 ||
             r.Aciklama?.Length > 500 || (r.GenelIndirimOrani.HasValue && r.GenelIndirimTutari.HasValue))
             throw Error("Fatura bilgileri veya genel indirim gecersiz.");
-        if (!await db.Cariler.AnyAsync(x => x.Id == r.CariId && x.TenantId == f.TenantId && x.AktifMi, ct))
+        if (!await db.CariKartlar.AnyAsync(x => x.Id == r.CariId && x.TenantId == f.TenantId && x.AktifMi, ct))
             throw Error("Ayni tenant icinde aktif cari secilmelidir.");
         var currency = Currency(r.ParaBirimKodu);
         var rate = Rate(currency, r.Kur);
@@ -157,7 +157,7 @@ public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesapla
     {
         if (r.Page < 1 || r.PageSize < 1 || r.PageSize > 500) throw Error("Sayfalama gecersiz.");
         var tenant = await TenantAsync(r.SubeId, ct);
-        const string where = @" FROM AlisFatura f JOIN Cari c ON c.Id=f.CariId AND c.TenantId=f.TenantId
+        const string where = @" FROM AlisFatura f JOIN CariKart c ON c.Id=f.CariId AND c.TenantId=f.TenantId
 WHERE f.TenantId=@TenantId AND f.SubeId=@SubeId AND f.SilindiMi=0
 AND (@CariId IS NULL OR f.CariId=@CariId) AND (@Durum IS NULL OR f.Durum=@Durum)
 AND (@Baslangic IS NULL OR f.FaturaTarihi>=@Baslangic) AND (@Bitis IS NULL OR f.FaturaTarihi<=@Bitis)
@@ -178,7 +178,7 @@ AND (@Search IS NULL OR f.FaturaNo LIKE @Search OR c.CariKodu LIKE @Search OR c.
     private async Task<AlisFatura> FindAsync(long id, long subeId, CancellationToken ct)
     {
         var tenant = await TenantAsync(subeId, ct);
-        return await db.AlisFaturalar.IgnoreQueryFilters().Include(x => x.Cari).Include(x => x.Detaylar.Where(d => !d.SilindiMi))
+        return await db.AlisFaturalar.IgnoreQueryFilters().Include(x => x.CariKart).Include(x => x.Detaylar.Where(d => !d.SilindiMi))
             .SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant && x.SubeId == subeId && !x.SilindiMi, ct)
             ?? throw new UygulamaHatasi(404, "Alis faturasi bulunamadi", "Alis faturasi bulunamadi.", "purchase_not_found");
     }
@@ -197,7 +197,7 @@ AND (@Search IS NULL OR f.FaturaNo LIKE @Search OR c.CariKodu LIKE @Search OR c.
     private static UygulamaHatasi Error(string message) => new(400, "Alis faturasi hatasi", message, "purchase_invalid");
     private static AlisFaturaDto Map(AlisFatura f) => new()
     {
-        Id = f.Id, DepoId = f.DepoId, CariId = f.CariId, CariAd = f.Cari.Ad, FaturaNo = f.FaturaNo, FaturaTarihi = f.FaturaTarihi,
+        Id = f.Id, DepoId = f.DepoId, CariId = f.CariId, CariAd = f.CariKart.Ad, FaturaNo = f.FaturaNo, FaturaTarihi = f.FaturaTarihi,
         ParaBirimKodu = f.ParaBirimKodu, Kur = f.Kur, KdvDahilMi = f.KdvDahilMi, Aciklama = f.Aciklama,
         AraToplam = f.AraToplam, GenelIndirimOrani = f.GenelIndirimOrani, GenelIndirimTutari = f.GenelIndirimTutari,
         ToplamMatrah = f.ToplamMatrah, ToplamKdv = f.ToplamKdv, NetToplam = f.NetToplam, Durum = f.Durum,

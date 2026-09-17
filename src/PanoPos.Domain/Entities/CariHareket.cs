@@ -16,7 +16,7 @@ public sealed class CariHareket : BaseEntity
     public DateTime HareketTarihi { get; set; }
     public string? Aciklama { get; set; }
 
-    public Cari Cari { get; set; } = null!;
+    public CariKart CariKart { get; set; } = null!;
     public Fatura? Fatura { get; set; }
     public Tahsilat? Tahsilat { get; set; }
 }

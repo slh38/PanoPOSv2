@@ -27,6 +27,6 @@ public sealed class Fatura : BaseEntity
     public long? KapatanKullaniciId { get; set; }
 
     public Siparis? Siparis { get; set; }
-    public Cari? Cari { get; set; }
+    public CariKart? CariKart { get; set; }
     public ICollection<FaturaDetay> Detaylar { get; set; } = new List<FaturaDetay>();
 }

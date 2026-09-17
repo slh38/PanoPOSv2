@@ -44,7 +44,7 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<Beden> Bedenler => Set<Beden>();
     public DbSet<StokKartVaryant> StokKartVaryantlari => Set<StokKartVaryant>();
     public DbSet<Barkod> Barkodlar => Set<Barkod>();
-    public DbSet<Cari> Cariler => Set<Cari>();
+    public DbSet<CariKart> CariKartlar => Set<CariKart>();
     public DbSet<CariHareket> CariHareketleri => Set<CariHareket>();
     public DbSet<Banka> Bankalar => Set<Banka>();
     public DbSet<BankaHareket> BankaHareketleri => Set<BankaHareket>();

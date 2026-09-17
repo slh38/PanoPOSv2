@@ -307,10 +307,10 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Veresiye tahsilatta faturada CariId zorunludur.", "invoice_customer_required");
         }
 
-        var cariVar = await _dbContext.Cariler.AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var cariVar = await _dbContext.CariKartlar.AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
         if (!cariVar)
         {
-            throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_not_found");
+            throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
         }
 
         _dbContext.CariHareketleri.Add(new CariHareket

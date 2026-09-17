@@ -72,10 +72,10 @@ public sealed class SiparisServisi : ISiparisServisi
 
         if (request.CariId.HasValue)
         {
-            var cariVar = await _dbContext.Cariler.AnyAsync(x => x.Id == request.CariId.Value && x.TenantId == sube.TenantId && x.AktifMi && x.SubeId == request.SubeId, cancellationToken);
+            var cariVar = await _dbContext.CariKartlar.AnyAsync(x => x.Id == request.CariId.Value && x.TenantId == sube.TenantId && x.AktifMi && x.SubeId == request.SubeId, cancellationToken);
             if (!cariVar)
             {
-                throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_not_found");
+                throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
             }
         }
 

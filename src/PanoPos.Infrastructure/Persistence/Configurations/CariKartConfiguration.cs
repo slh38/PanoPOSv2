@@ -4,11 +4,11 @@ using PanoPos.Domain.Entities;
 
 namespace PanoPos.Infrastructure.Persistence.Configurations;
 
-public sealed class CariConfiguration : IEntityTypeConfiguration<Cari>
+public sealed class CariKartConfiguration : IEntityTypeConfiguration<CariKart>
 {
-    public void Configure(EntityTypeBuilder<Cari> builder)
+    public void Configure(EntityTypeBuilder<CariKart> builder)
     {
-        builder.ToTable("Cari");
+        builder.ToTable("CariKart");
         PanoPosDbContext.ConfigureBaseEntity(builder);
 
         builder.Property(x => x.CariKodu).HasMaxLength(50);

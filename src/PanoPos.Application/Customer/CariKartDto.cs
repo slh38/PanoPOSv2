@@ -2,8 +2,9 @@ using PanoPos.Domain.Enums;
 
 namespace PanoPos.Application.Customer;
 
-public sealed class CariOlusturRequestDto
+public sealed class CariKartDto
 {
+    public long Id { get; set; }
     public long SubeId { get; set; }
     public string? CariKodu { get; set; }
     public string Ad { get; set; } = string.Empty;
@@ -11,5 +12,5 @@ public sealed class CariOlusturRequestDto
     public string? Telefon { get; set; }
     public string? Email { get; set; }
     public string? VergiNo { get; set; }
-    public bool AktifMi { get; set; } = true;
+    public bool AktifMi { get; set; }
 }

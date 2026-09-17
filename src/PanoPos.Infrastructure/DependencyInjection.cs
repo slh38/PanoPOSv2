@@ -53,7 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthIslemLogServisi, AuthIslemLogServisi>();
         services.AddScoped<IKasaServisi, KasaServisi>();
         services.AddScoped<IVardiyaServisi, VardiyaServisi>();
-        services.AddScoped<ICariServisi, CariServisi>();
+        services.AddScoped<ICariKartServisi, CariKartServisi>();
         services.AddScoped<IMasaServisi, MasaServisi>();
         services.AddScoped<IMasaGrupServisi, MasaGrupServisi>();
         services.AddScoped<IAdisyonServisi, AdisyonServisi>();

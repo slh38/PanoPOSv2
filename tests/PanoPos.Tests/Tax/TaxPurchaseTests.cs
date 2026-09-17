@@ -26,7 +26,7 @@ public sealed class TaxPurchaseTests : IDisposable
     private readonly AlisFaturaServisi purchase;
     private readonly StokKart stok;
     private readonly StokKartSatisBirimi birim;
-    private readonly Cari cari;
+    private readonly CariKart cari;
     public TaxPurchaseTests()
     {
         connection.Open();
@@ -183,7 +183,7 @@ public sealed class TaxPurchaseTests : IDisposable
         Assert.Empty((await purchase.GetPagedAsync(new(){SubeId=sube.Id})).Kayitlar);
         var r=Request();r.SubeId=sube.Id;
         await Assert.ThrowsAsync<UygulamaHatasi>(()=>purchase.CreateAsync(r));
-        var otherCari=new Cari{TenantId=tenant,SubeId=sube.Id,Ad="Other"};db.Add(otherCari);await db.SaveChangesAsync();
+        var otherCari=new CariKart{TenantId=tenant,SubeId=sube.Id,Ad="Other"};db.Add(otherCari);await db.SaveChangesAsync();
         r.CariId=otherCari.Id;
         await Assert.ThrowsAsync<UygulamaHatasi>(()=>purchase.CreateAsync(r));
         stok.KdvId=foreign.Id;await db.SaveChangesAsync();

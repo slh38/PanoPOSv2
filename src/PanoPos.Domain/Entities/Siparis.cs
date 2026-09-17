@@ -23,6 +23,6 @@ public sealed class Siparis : BaseEntity
     public SiparisDurumu Durum { get; set; }
 
     public Adisyon? Adisyon { get; set; }
-    public Cari? Cari { get; set; }
+    public CariKart? CariKart { get; set; }
     public ICollection<SiparisDetay> Detaylar { get; set; } = new List<SiparisDetay>();
 }

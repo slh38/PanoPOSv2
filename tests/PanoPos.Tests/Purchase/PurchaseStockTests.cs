@@ -21,7 +21,7 @@ public sealed class PurchaseStockTests : IDisposable
     private readonly StokServisi stockService;
     private readonly StokKart stock;
     private readonly StokKartSatisBirimi unit;
-    private readonly Cari customer;
+    private readonly CariKart customer;
     private readonly Depo target;
 
     public PurchaseStockTests()
