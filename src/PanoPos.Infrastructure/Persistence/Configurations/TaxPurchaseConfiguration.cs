@@ -27,6 +27,8 @@ public sealed class TenantAyarConfiguration : IEntityTypeConfiguration<TenantAya
     public void Configure(EntityTypeBuilder<TenantAyar> b)
     {
         b.ToTable("TenantAyar");
+        b.Property(x => x.MaliyetYontemi).HasDefaultValue(PanoPos.Domain.Enums.MaliyetYontemi.AgirlikliOrtalama)
+            .HasSentinel(PanoPos.Domain.Enums.MaliyetYontemi.AgirlikliOrtalama);
         PanoPosDbContext.ConfigureBaseEntity(b);
         b.HasIndex(x => x.TenantId).IsUnique();
         b.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).HasPrincipalKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);

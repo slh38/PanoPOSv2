@@ -2223,3 +2223,65 @@ Performans
 Genişletilebilirlik
 
 sırasıdır.
+
+---
+
+# 85. STOK MALİYET ÇEKİRDEĞİ (17 EYLÜL 2026)
+
+MaliyetYontemi yalnızca SonAlis ve AgirlikliOrtalama değerlerini içerir.
+AgirlikliOrtalama, hareketli ağırlıklı ortalamadır ve TenantAyar için
+varsayılan yöntemdir. Yöntem değişikliği yalnızca yeni satışları etkiler.
+
+StokMaliyet; TenantId + SubeId + DepoId + StokKartId + nullable
+StokKartVaryantId bazında güncel temel stok birimi maliyetini tutar.
+Varyantsız ve varyantlı kayıtlar ayrı filtreli unique indexlerle korunur.
+SonAlisMaliyeti ve AgirlikliOrtalamaMaliyet decimal(18,6) saklanır.
+StokKartFiyat satış fiyatıdır; maliyet kaynağı veya maliyet tablosu değildir.
+
+Onaylanan alış faturası her iki maliyeti de aynı anda günceller:
+
+- Kaynak, satır ve genel iskonto sonrası KDV hariç AlisFaturaDetay.Matrah'tır.
+- Matrah belge para birimindedir; ana para birimine snapshot kuruyla bir
+  kez çevrilir. Mevcut çekirdekte ana para birimi TRY sınırı kullanılır.
+  Kur servisi veya yeni para birimi master yapısı eklenmemiştir.
+- Temel miktar Miktar * Katsayi'dır. Aynı faturadaki aynı stok/varyant
+  satırları birlikte hesaplanır; satır sırası sonucu değiştirmez.
+- Son alış maliyeti = toplam ana para birimi matrahı / toplam temel miktar.
+- Eski miktar, yeni alış hareketleri eklenmeden önce ledger'dan okunur.
+  Pozitif eski miktarda yeni ortalama = (eski miktar * eski ortalama +
+  yeni alış matrahı) / (eski miktar + yeni temel miktar).
+- Eski miktar sıfır veya negatifse ortalama yeni alış maliyetine resetlenir.
+- Pozitif eski stok bulunup maliyet kaydı yoksa eski ortalama sıfır kabul
+  edilir. Örneğin maliyetsiz 100 devir + 100 adet 10 TRY alış ortalama 5 TRY
+  oluşturur. Devir/transfer değerlemesi bu görevde yapılmamıştır.
+- Ara hesaplar korunur; sonuç altı ondalığa yuvarlanır.
+
+Maliyet, alış stok fişi/hareketleri, audit ve onay durumu mevcut tek
+transaction içindedir. Hata tamamını geri alır; tekrar onay maliyeti tekrar
+işlemez. SQL Server alış ve satış maliyet erişimleri ortak anahtar sırası
+ve UPDLOCK/HOLDLOCK kullanır. Gerçek eşzamanlı yük testi yapılmamıştır.
+
+Satış FaturaDetay.BirimMaliyet, seçili temel maliyet * snapshot BirimKatsayi
+olarak satış birimi cinsinde decimal(18,6) saklanır. Kullanılan
+MaliyetYontemi de satırda snapshot olarak tutulur. Satış, güncel ortalamayı
+veya son alış maliyetini değiştirmez. Maliyet yoksa sıfır snapshot alınır,
+satış engellenmez. Sonraki alışlar veya yöntem değişikliği geçmiş faturayı
+değiştirmez; geçmiş satışlara geriye dönük maliyet hesaplanmaz.
+
+API:
+
+- GET /api/v1/stok-maliyet: subeId, depoId, stokKartId ve isteğe bağlı
+  stokKartVaryantId ile güncel maliyetleri ve seçili yöntemi okur.
+- PUT /api/v1/tenant-ayar/maliyet-yontemi: SubeId ve MaliyetYontemi ile
+  tenant yöntemini değiştirir. Diğer tenant ayarları korunur.
+- Maliyeti elle değiştiren genel CRUD endpointi yoktur.
+
+Migration: 20260917100113_AddStockCostCore. PanoPosDb üzerine mevcut
+migration zinciriyle uygulandı; veritabanı sıfırlanmadı.
+SQLite in-memory dahil 301/301 test başarılıdır (260 mevcut + 41 yeni).
+Solution build başarılıdır; mevcut Desktop WindowsBase uyarısı kapsam
+dışında bırakılmıştır.
+
+FIFO/LIFO, iade maliyeti, transfer/devir/sayım maliyet davranışları ve
+maliyet raporları henüz yapılmamıştır. Desktop, appsettings.json ve
+CODEX_RULES.md kullanıcı dosyaları bu görevde değiştirilmemiştir.

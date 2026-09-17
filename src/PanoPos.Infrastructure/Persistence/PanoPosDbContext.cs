@@ -22,6 +22,7 @@ public sealed class PanoPosDbContext : DbContext
     public DbSet<StokFis> StokFisleri => Set<StokFis>();
     public DbSet<StokFisDetay> StokFisDetaylari => Set<StokFisDetay>();
     public DbSet<StokHareket> StokHareketleri => Set<StokHareket>();
+    public DbSet<StokMaliyet> StokMaliyetleri => Set<StokMaliyet>();
     public DbSet<Sube> Subeler => Set<Sube>();
     public DbSet<Cihaz> Cihazlar => Set<Cihaz>();
     public DbSet<Kasa> Kasalar => Set<Kasa>();

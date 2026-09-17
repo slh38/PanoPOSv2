@@ -4,6 +4,9 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class FaturaDetay : BaseEntity
 {
+    // Cost per sold sales unit, in the tenant base currency.
+    public decimal BirimMaliyet { get; set; }
+    public PanoPos.Domain.Enums.MaliyetYontemi MaliyetYontemi { get; set; } = PanoPos.Domain.Enums.MaliyetYontemi.AgirlikliOrtalama;
     public long KdvId { get; set; }
     public decimal KdvOrani { get; set; }
     public bool KdvDahilMi { get; set; }

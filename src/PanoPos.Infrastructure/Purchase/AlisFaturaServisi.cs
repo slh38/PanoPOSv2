@@ -8,7 +8,8 @@ using PanoPos.Domain.Enums;
 using PanoPos.Infrastructure.Persistence;
 namespace PanoPos.Infrastructure.Purchase;
 
-public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServisi vergi) : IAlisFaturaServisi
+public sealed partial class AlisFaturaServisi(PanoPosDbContext db, IVergiHesaplamaServisi vergi,
+    PanoPos.Application.Stock.IStokMaliyetServisi? maliyet = null) : IAlisFaturaServisi
 {
     public async Task<AlisFaturaDto> CreateAsync(AlisFaturaKaydetRequest r, CancellationToken ct = default)
     {

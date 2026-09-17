@@ -15,6 +15,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
 {
     private readonly PanoPosDbContext _dbContext;
     private readonly IOutboxServisi _outboxServisi;
+    private readonly PanoPos.Application.Stock.IStokMaliyetServisi _maliyet;
 
     public FaturaServisi(PanoPosDbContext dbContext)
         : this(dbContext, new BosOutboxServisi())
@@ -22,9 +23,16 @@ public sealed partial class FaturaServisi : IFaturaServisi
     }
 
     public FaturaServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi)
+        : this(dbContext, outboxServisi, new PanoPos.Infrastructure.Stock.StokMaliyetServisi(dbContext))
+    {
+    }
+
+    public FaturaServisi(PanoPosDbContext dbContext, IOutboxServisi outboxServisi,
+        PanoPos.Application.Stock.IStokMaliyetServisi maliyet)
     {
         _dbContext = dbContext;
         _outboxServisi = outboxServisi;
+        _maliyet = maliyet;
     }
 
     public async Task<FaturaDto> SiparistenFaturaOlusturAsync(SiparistenFaturaOlusturRequestDto request, CancellationToken cancellationToken = default)
@@ -114,6 +122,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
             });
         }
 
+        await _maliyet.SatisSnapshotAsync(fatura, fatura.Detaylar.ToList(), cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await CreateSalesStockAsync(fatura, cancellationToken);
 
@@ -180,6 +189,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
             AktifMi = fatura.AktifMi,
             Detaylar = fatura.Detaylar.OrderBy(x => x.Id).Select(x => new FaturaDetayDto
             {
+                BirimMaliyet = x.BirimMaliyet, MaliyetYontemi = x.MaliyetYontemi,
                 Id = x.Id,
                 KdvId = x.KdvId, KdvOrani = x.KdvOrani, KdvDahilMi = x.KdvDahilMi,
                 Matrah = x.Matrah, KdvTutari = x.KdvTutari, GenelIndirimPayi = x.GenelIndirimPayi,

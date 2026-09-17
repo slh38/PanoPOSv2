@@ -62,6 +62,8 @@ public sealed partial class AlisFaturaServisi
                 BirimKodu = line.BirimKodu, BirimAdi = line.BirimAdi, Katsayi = line.Katsayi, Miktar = line.Miktar
             });
         }
+        // Read the old ledger balance and update both costs before adding this receipt.
+        await (maliyet ?? new StokMaliyetServisi(db)).AlistanGuncelleAsync(f, ct);
         db.StokFisleri.Add(fis);
         await db.SaveChangesAsync(ct);
         foreach (var line in fis.Detaylar)

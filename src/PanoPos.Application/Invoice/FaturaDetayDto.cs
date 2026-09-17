@@ -2,6 +2,8 @@ namespace PanoPos.Application.Invoice;
 
 public sealed class FaturaDetayDto
 {
+    public decimal BirimMaliyet { get; set; }
+    public PanoPos.Domain.Enums.MaliyetYontemi MaliyetYontemi { get; set; }
     public long KdvId { get; set; }
     public decimal KdvOrani { get; set; }
     public bool KdvDahilMi { get; set; }

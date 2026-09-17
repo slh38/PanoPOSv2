@@ -9,6 +9,9 @@ public sealed class FaturaDetayConfiguration : IEntityTypeConfiguration<FaturaDe
     public void Configure(EntityTypeBuilder<FaturaDetay> builder)
     {
         builder.ToTable("FaturaDetay");
+        builder.Property(x => x.BirimMaliyet).HasPrecision(18, 6);
+        builder.Property(x => x.MaliyetYontemi).HasDefaultValue(PanoPos.Domain.Enums.MaliyetYontemi.AgirlikliOrtalama)
+            .HasSentinel(PanoPos.Domain.Enums.MaliyetYontemi.AgirlikliOrtalama);
         PanoPosDbContext.ConfigureBaseEntity(builder);
         builder.Property(x => x.KdvOrani).HasPrecision(5, 2);
         builder.Property(x => x.Matrah).HasPrecision(18, 2);
