@@ -2285,3 +2285,38 @@ dışında bırakılmıştır.
 FIFO/LIFO, iade maliyeti, transfer/devir/sayım maliyet davranışları ve
 maliyet raporları henüz yapılmamıştır. Desktop, appsettings.json ve
 CODEX_RULES.md kullanıcı dosyaları bu görevde değiştirilmemiştir.
+
+---
+
+# 86. BACKEND STOK KARTI TERMİNOLOJİSİ
+
+Güncel backend dosya adları, controller yolları ve teknik parametreler
+StokKart / StokGrup / StokKategori terminolojisiyle uyumludur.
+Entity, DTO, servis ve configuration sınıfları zaten bu isimlerdeydi;
+kalan eski dosya adları ve yerel değişkenler de aynı terminolojiye taşındı.
+Stok kartı, grup ve kategori hata kodları stok_kart_, stok_grup_ ve
+stok_kategori_ öneklerini kullanır; doğrulama koşulları ve HTTP durumları
+değişmemiştir. Doğal dildeki ürün ifadeleri korunur.
+
+Güncel stok kartı API yolları:
+
+- GET/POST /api/v1/stok-kart
+- GET/PUT /api/v1/stok-kart/{id}
+- GET/POST /api/v1/stok-kart/{stokKartId}/varyant
+- PUT /api/v1/stok-kart-fiyat/{id}
+- GET/POST /api/v1/stok-grup
+- GET/POST /api/v1/stok-kategori
+- POST /api/v1/stok-kart/tam-kayit
+
+Eski ürün endpointleri için alias veya geriye uyumluluk yolu yoktur.
+Swagger çıktısında güncel teknik terminoloji doğrulanmıştır. Mevcut Desktop
+eski yolları kullanabilir; bu görevde değiştirilmemiştir ve yeni Desktop
+yukarıdaki API yollarını kullanmalıdır.
+
+PanoPosDb tablo/kolon adları zaten doğru olduğundan yeni migration veya
+database update gerekmemiştir. Migration geçmişi ve ModelSnapshot korunmuş,
+EF modelinde bekleyen değişiklik olmadığı doğrulanmıştır. Dapper sorguları
+mevcut şemayla uyumludur; sorgu davranışı değiştirilmemiştir.
+Refactor öncesi ve sonrası 301/301 test başarılıdır. Solution build başarılı;
+mevcut Desktop WindowsBase uyarısı devam etmektedir. Cari alanı ve kullanıcı
+dosyaları değiştirilmemiştir.

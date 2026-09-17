@@ -190,7 +190,7 @@ public sealed class FaturaServisiTests : IDisposable
     }
 
     private async Task<Siparis> HazirSiparisAsync(
-        string urunAd = "Latte",
+        string stokKartAd = "Latte",
         string paraBirimKodu = "TRY",
         decimal kur = 1m,
         decimal? satirIndirimOrani = null,
@@ -198,21 +198,21 @@ public sealed class FaturaServisiTests : IDisposable
         decimal? genelIndirimOrani = null,
         decimal? genelIndirimTutari = null)
     {
-        var urun = new StokKart
+        var stokKart = new StokKart
         {
             KdvId = 1,
             TenantId = SystemSeedData.TenantGuid,
             SubeId = 1,
-            Ad = urunAd,
+            Ad = stokKartAd,
             StokKartTipi = StokKartTipi.Mamul,
             AktifMi = true,
             SilindiMi = false
         };
 
-        _dbContext.StokKartler.Add(urun);
+        _dbContext.StokKartler.Add(stokKart);
         await _dbContext.SaveChangesAsync();
         _dbContext.StokKartSatisBirimleri.Add(new StokKartSatisBirimi {
-            TenantId = urun.TenantId, SubeId = 1, StokKartId = urun.Id,
+            TenantId = stokKart.TenantId, SubeId = 1, StokKartId = stokKart.Id,
             BirimKodu = "AD", BirimAdi = "Adet", Katsayi = 1, VarsayilanMi = true
         });
         await _dbContext.SaveChangesAsync();
@@ -229,7 +229,7 @@ public sealed class FaturaServisiTests : IDisposable
 
         await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
         {
-            StokKartId = urun.Id,
+            StokKartId = stokKart.Id,
             Miktar = 2,
             BirimFiyat = 60m,
             IndirimOrani = satirIndirimOrani,

@@ -7,7 +7,7 @@ using PanoPos.Infrastructure.Persistence;
 namespace PanoPos.WebApi.Controllers;
 
 [ApiController]
-[Route("api/v1/urun-fiyat")]
+[Route("api/v1/stok-kart-fiyat")]
 public sealed class StokKartFiyatController : ControllerBase
 {
     private readonly PanoPosDbContext _db;

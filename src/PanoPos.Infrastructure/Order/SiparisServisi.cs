@@ -127,8 +127,8 @@ public sealed class SiparisServisi : ISiparisServisi
             throw new UygulamaHatasi(409, "Siparis guncellenemedi", "Sadece bekleyen siparise satir eklenebilir.", "siparis_not_editable");
         }
 
-        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
+        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         if (request.StokKartVaryantId.HasValue)
         {
@@ -139,16 +139,16 @@ public sealed class SiparisServisi : ISiparisServisi
             }
         }
 
-        var kdv = await _dbContext.Kdvler.SingleOrDefaultAsync(x => x.Id == urun.KdvId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+        var kdv = await _dbContext.Kdvler.SingleOrDefaultAsync(x => x.Id == stokKart.KdvId && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
             ?? throw new UygulamaHatasi(400, "Gecersiz KDV", "Stok kartinin aktif KDV kaydi bulunamadi.", "kdv_invalid");
         StokKartSatisBirimi? birim = null;
         if (request.StokKartSatisBirimiId.HasValue)
             birim = await _dbContext.StokKartSatisBirimleri.SingleOrDefaultAsync(x => x.Id == request.StokKartSatisBirimiId &&
-                x.StokKartId == urun.Id && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
+                x.StokKartId == stokKart.Id && x.TenantId == siparis.TenantId && x.AktifMi, cancellationToken)
                 ?? throw new UygulamaHatasi(400, "Gecersiz birim", "Satis birimi bulunamadi.", "sales_unit_invalid");
         else
         {
-            var varsayilanlar = await _dbContext.StokKartSatisBirimleri.Where(x => x.StokKartId == urun.Id &&
+            var varsayilanlar = await _dbContext.StokKartSatisBirimleri.Where(x => x.StokKartId == stokKart.Id &&
                 x.TenantId == siparis.TenantId && x.AktifMi && x.VarsayilanMi).Take(2).ToListAsync(cancellationToken);
             if (varsayilanlar.Count > 1)
                 throw new UygulamaHatasi(400, "Gecersiz birim", "Birden fazla varsayilan satis birimi var.", "sales_unit_invalid");

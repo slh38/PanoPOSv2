@@ -58,10 +58,10 @@ public sealed class BarkodServisi : IBarkodServisi
         long subeId;
         if (request.StokKartId.HasValue)
         {
-            var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId.Value, cancellationToken)
-                ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
-            tenantId = urun.TenantId;
-            subeId = urun.SubeId;
+            var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == request.StokKartId.Value, cancellationToken)
+                ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
+            tenantId = stokKart.TenantId;
+            subeId = stokKart.SubeId;
         }
         else
         {

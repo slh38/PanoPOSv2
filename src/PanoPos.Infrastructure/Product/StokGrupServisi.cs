@@ -19,7 +19,7 @@ public sealed class StokGrupServisi : IStokGrupServisi
     {
         if (string.IsNullOrWhiteSpace(request.Ad))
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "Grup adi zorunludur.", "urun_grup_required");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "Grup adi zorunludur.", "stok_grup_required");
         }
 
         var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
@@ -28,7 +28,7 @@ public sealed class StokGrupServisi : IStokGrupServisi
         var kod = NormalizeOptional(request.Kod);
         if (kod is not null && await _dbContext.StokGruplari.AnyAsync(x => x.TenantId == sube.TenantId && x.Kod == kod, cancellationToken))
         {
-            throw new UygulamaHatasi(409, "Grup hatasi", "Ayni tenant icinde grup kodu tekrar edemez.", "urun_grup_duplicate");
+            throw new UygulamaHatasi(409, "Grup hatasi", "Ayni tenant icinde grup kodu tekrar edemez.", "stok_grup_duplicate");
         }
 
         var grup = new StokGrup

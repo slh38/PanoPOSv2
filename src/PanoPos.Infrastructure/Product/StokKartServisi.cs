@@ -20,7 +20,7 @@ public sealed class StokKartServisi : IStokKartServisi
     {
         if (string.IsNullOrWhiteSpace(request.Ad))
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "urun_ad_required");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "stok_kart_ad_required");
         }
 
         var sube = await _dbContext.Subeler.SingleOrDefaultAsync(x => x.Id == request.SubeId, cancellationToken)
@@ -30,7 +30,7 @@ public sealed class StokKartServisi : IStokKartServisi
         await KdvKontroluAsync(request.KdvId, sube.TenantId, cancellationToken);
         await KategoriVeGrupKontroluAsync(request.StokKategoriId, request.StokGrupId, cancellationToken);
 
-        var urun = new StokKart
+        var stokKart = new StokKart
         {
             TenantId = sube.TenantId,
             SubeId = sube.Id,
@@ -45,42 +45,42 @@ public sealed class StokKartServisi : IStokKartServisi
             SilindiMi = false
         };
 
-        _dbContext.StokKartler.Add(urun);
+        _dbContext.StokKartler.Add(stokKart);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await StokKartDetayGetirAsync(urun.Id, cancellationToken);
+        return await StokKartDetayGetirAsync(stokKart.Id, cancellationToken);
     }
 
     public async Task<StokKartDto> StokKartGuncelleAsync(long id, StokKartGuncelleRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Ad))
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "urun_ad_required");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKart adi bos olamaz.", "stok_kart_ad_required");
         }
 
-        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
+        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
-        await StokKartKoduTekrarKontroluAsync(urun.TenantId, request.StokKartKodu, urun.Id, cancellationToken);
-        await KdvKontroluAsync(request.KdvId, urun.TenantId, cancellationToken);
+        await StokKartKoduTekrarKontroluAsync(stokKart.TenantId, request.StokKartKodu, stokKart.Id, cancellationToken);
+        await KdvKontroluAsync(request.KdvId, stokKart.TenantId, cancellationToken);
         await KategoriVeGrupKontroluAsync(request.StokKategoriId, request.StokGrupId, cancellationToken);
 
-        urun.StokKartKodu = NormalizeOptional(request.StokKartKodu);
-        urun.Ad = request.Ad.Trim();
-        urun.Aciklama = NormalizeOptional(request.Aciklama);
-        urun.StokKartTipi = request.StokKartTipi;
-        urun.StokKategoriId = request.StokKategoriId;
-        urun.StokGrupId = request.StokGrupId;
-        urun.KdvId = request.KdvId;
-        urun.AktifMi = request.AktifMi;
+        stokKart.StokKartKodu = NormalizeOptional(request.StokKartKodu);
+        stokKart.Ad = request.Ad.Trim();
+        stokKart.Aciklama = NormalizeOptional(request.Aciklama);
+        stokKart.StokKartTipi = request.StokKartTipi;
+        stokKart.StokKategoriId = request.StokKategoriId;
+        stokKart.StokGrupId = request.StokGrupId;
+        stokKart.KdvId = request.KdvId;
+        stokKart.AktifMi = request.AktifMi;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return await StokKartDetayGetirAsync(urun.Id, cancellationToken);
+        return await StokKartDetayGetirAsync(stokKart.Id, cancellationToken);
     }
 
     public async Task<StokKartDto> StokKartDetayGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var urun = await _dbContext.StokKartler
+        var stokKart = await _dbContext.StokKartler
             .Include(x => x.Kdv)
             .Include(x => x.StokKategori)
             .Include(x => x.StokGrup)
@@ -88,32 +88,32 @@ public sealed class StokKartServisi : IStokKartServisi
             .Include(x => x.Varyantlar.Where(y => y.AktifMi)).ThenInclude(x => x.Beden)
             .Include(x => x.Barkodlar.Where(y => y.AktifMi))
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
+            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         return new StokKartDto
         {
-            Id = urun.Id,
-            KdvId = urun.KdvId,
-            KdvOrani = urun.Kdv.Oran,
-            StokKartKodu = urun.StokKartKodu,
-            Ad = urun.Ad,
-            Aciklama = urun.Aciklama,
-            StokKartTipi = urun.StokKartTipi,
-            StokKategoriId = urun.StokKategoriId,
-            StokKategoriAd = urun.StokKategori?.Ad,
-            StokGrupId = urun.StokGrupId,
-            StokGrupAd = urun.StokGrup?.Ad,
-            AktifMi = urun.AktifMi,
-            Barkodlar = urun.Barkodlar.OrderBy(x => x.BarkodNo).Select(x => new BarkodDto
+            Id = stokKart.Id,
+            KdvId = stokKart.KdvId,
+            KdvOrani = stokKart.Kdv.Oran,
+            StokKartKodu = stokKart.StokKartKodu,
+            Ad = stokKart.Ad,
+            Aciklama = stokKart.Aciklama,
+            StokKartTipi = stokKart.StokKartTipi,
+            StokKategoriId = stokKart.StokKategoriId,
+            StokKategoriAd = stokKart.StokKategori?.Ad,
+            StokGrupId = stokKart.StokGrupId,
+            StokGrupAd = stokKart.StokGrup?.Ad,
+            AktifMi = stokKart.AktifMi,
+            Barkodlar = stokKart.Barkodlar.OrderBy(x => x.BarkodNo).Select(x => new BarkodDto
             {
                 Id = x.Id,
                 BarkodNo = x.BarkodNo,
                 BarkodTipi = x.BarkodTipi,
                 StokKartId = x.StokKartId,
                 StokKartVaryantId = x.StokKartVaryantId,
-                StokKartAd = urun.Ad
+                StokKartAd = stokKart.Ad
             }).ToList(),
-            Varyantlar = urun.Varyantlar.OrderBy(x => x.VaryantKodu).Select(x => new StokKartVaryantDto
+            Varyantlar = stokKart.Varyantlar.OrderBy(x => x.VaryantKodu).Select(x => new StokKartVaryantDto
             {
                 Id = x.Id,
                 StokKartId = x.StokKartId,
@@ -180,10 +180,10 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         };
     }
 
-    public async Task<StokKartVaryantDto> StokKartVaryantOlusturAsync(long urunId, StokKartVaryantOlusturRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<StokKartVaryantDto> StokKartVaryantOlusturAsync(long stokKartId, StokKartVaryantOlusturRequestDto request, CancellationToken cancellationToken = default)
     {
-        var urun = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == urunId, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
+        var stokKart = await _dbContext.StokKartler.SingleOrDefaultAsync(x => x.Id == stokKartId, cancellationToken)
+            ?? throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
 
         if (request.RenkId is null && request.BedenId is null)
         {
@@ -205,7 +205,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(404, "Beden bulunamadi", "Beden bulunamadi.", "beden_not_found");
         }
 
-        var ayniKombinasyonVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.StokKartId == urunId && x.RenkId == request.RenkId && x.BedenId == request.BedenId, cancellationToken);
+        var ayniKombinasyonVar = await _dbContext.StokKartVaryantlari.AnyAsync(x => x.StokKartId == stokKartId && x.RenkId == request.RenkId && x.BedenId == request.BedenId, cancellationToken);
         if (ayniKombinasyonVar)
         {
             throw new UygulamaHatasi(409, "Varyant hatasi", "Ayni urun altinda ayni varyant kombinasyonu tekrar edemez.", "variant_duplicate");
@@ -213,9 +213,9 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
         var varyant = new StokKartVaryant
         {
-            TenantId = urun.TenantId,
-            SubeId = urun.SubeId,
-            StokKartId = urun.Id,
+            TenantId = stokKart.TenantId,
+            SubeId = stokKart.SubeId,
+            StokKartId = stokKart.Id,
             RenkId = request.RenkId,
             BedenId = request.BedenId,
             VaryantKodu = request.VaryantKodu.Trim(),
@@ -227,18 +227,18 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         _dbContext.StokKartVaryantlari.Add(varyant);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return (await StokKartVaryantlariGetirAsync(urunId, cancellationToken)).Single(x => x.Id == varyant.Id);
+        return (await StokKartVaryantlariGetirAsync(stokKartId, cancellationToken)).Single(x => x.Id == varyant.Id);
     }
 
-    public async Task<List<StokKartVaryantDto>> StokKartVaryantlariGetirAsync(long urunId, CancellationToken cancellationToken = default)
+    public async Task<List<StokKartVaryantDto>> StokKartVaryantlariGetirAsync(long stokKartId, CancellationToken cancellationToken = default)
     {
-        if (!await _dbContext.StokKartler.AnyAsync(x => x.Id == urunId, cancellationToken))
+        if (!await _dbContext.StokKartler.AnyAsync(x => x.Id == stokKartId, cancellationToken))
         {
-            throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "urun_not_found");
+            throw new UygulamaHatasi(404, "StokKart bulunamadi", "StokKart bulunamadi.", "stok_kart_not_found");
         }
 
         return await _dbContext.StokKartVaryantlari
-            .Where(x => x.StokKartId == urunId)
+            .Where(x => x.StokKartId == stokKartId)
             .Include(x => x.Renk)
             .Include(x => x.Beden)
             .OrderBy(x => x.VaryantKodu)
@@ -256,31 +256,31 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             .ToListAsync(cancellationToken);
     }
 
-    private async Task StokKartKoduTekrarKontroluAsync(Guid tenantId, string? urunKodu, long? urunId, CancellationToken cancellationToken)
+    private async Task StokKartKoduTekrarKontroluAsync(Guid tenantId, string? stokKartKodu, long? stokKartId, CancellationToken cancellationToken)
     {
-        var normalized = NormalizeOptional(urunKodu);
+        var normalized = NormalizeOptional(stokKartKodu);
         if (normalized is null)
         {
             return;
         }
 
-        var exists = await _dbContext.StokKartler.AnyAsync(x => x.TenantId == tenantId && x.StokKartKodu == normalized && (!urunId.HasValue || x.Id != urunId.Value), cancellationToken);
+        var exists = await _dbContext.StokKartler.AnyAsync(x => x.TenantId == tenantId && x.StokKartKodu == normalized && (!stokKartId.HasValue || x.Id != stokKartId.Value), cancellationToken);
         if (exists)
         {
-            throw new UygulamaHatasi(409, "StokKart hatasi", "Ayni tenant icinde StokKartKodu tekrar etmesin.", "urun_kodu_duplicate");
+            throw new UygulamaHatasi(409, "StokKart hatasi", "Ayni tenant icinde StokKartKodu tekrar etmesin.", "stok_kart_kodu_duplicate");
         }
     }
 
-    private async Task KategoriVeGrupKontroluAsync(long? urunKategoriId, long? urunGrupId, CancellationToken cancellationToken)
+    private async Task KategoriVeGrupKontroluAsync(long? stokKategoriId, long? stokGrupId, CancellationToken cancellationToken)
     {
-        if (urunKategoriId.HasValue && !await _dbContext.StokKategorileri.AnyAsync(x => x.Id == urunKategoriId.Value, cancellationToken))
+        if (stokKategoriId.HasValue && !await _dbContext.StokKategorileri.AnyAsync(x => x.Id == stokKategoriId.Value, cancellationToken))
         {
-            throw new UygulamaHatasi(404, "Kategori bulunamadi", "StokKart kategorisi bulunamadi.", "urun_kategori_not_found");
+            throw new UygulamaHatasi(404, "Kategori bulunamadi", "StokKart kategorisi bulunamadi.", "stok_kategori_not_found");
         }
 
-        if (urunGrupId.HasValue && !await _dbContext.StokGruplari.AnyAsync(x => x.Id == urunGrupId.Value, cancellationToken))
+        if (stokGrupId.HasValue && !await _dbContext.StokGruplari.AnyAsync(x => x.Id == stokGrupId.Value, cancellationToken))
         {
-            throw new UygulamaHatasi(404, "Grup bulunamadi", "StokKart grubu bulunamadi.", "urun_grup_not_found");
+            throw new UygulamaHatasi(404, "Grup bulunamadi", "StokKart grubu bulunamadi.", "stok_grup_not_found");
         }
     }
 

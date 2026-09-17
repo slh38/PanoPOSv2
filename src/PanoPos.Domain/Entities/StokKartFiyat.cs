@@ -12,4 +12,3 @@ public sealed class StokKartFiyat : BaseEntity
     public StokKartSatisBirimi StokKartSatisBirimi { get; set; } = null!;
     public FiyatTipi FiyatTipi { get; set; } = null!;
 }
-

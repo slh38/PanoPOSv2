@@ -14,12 +14,12 @@ public sealed class ProductServicesTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly PanoPosDbContext _dbContext;
-    private readonly StokKartServisi _urunServisi;
+    private readonly StokKartServisi _stokKartServisi;
     private readonly BarkodServisi _barkodServisi;
     private readonly RenkServisi _renkServisi;
     private readonly BedenServisi _bedenServisi;
-    private readonly StokKategoriServisi _urunKategoriServisi;
-    private readonly StokGrupServisi _urunGrupServisi;
+    private readonly StokKategoriServisi _stokKategoriServisi;
+    private readonly StokGrupServisi _stokGrupServisi;
 
     public ProductServicesTests()
     {
@@ -34,18 +34,18 @@ public sealed class ProductServicesTests : IDisposable
         _dbContext.Database.EnsureDeleted();
         _dbContext.Database.EnsureCreated();
 
-        _urunServisi = new StokKartServisi(_dbContext);
+        _stokKartServisi = new StokKartServisi(_dbContext);
         _barkodServisi = new BarkodServisi(_dbContext);
         _renkServisi = new RenkServisi(_dbContext);
         _bedenServisi = new BedenServisi(_dbContext);
-        _urunKategoriServisi = new StokKategoriServisi(_dbContext);
-        _urunGrupServisi = new StokGrupServisi(_dbContext);
+        _stokKategoriServisi = new StokKategoriServisi(_dbContext);
+        _stokGrupServisi = new StokGrupServisi(_dbContext);
     }
 
     [Fact]
     public async Task StokKart_olusturulabilir()
     {
-        var urun = await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
+        var stokKart = await _stokKartServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
             KdvId = 1,
             SubeId = 1,
@@ -54,14 +54,14 @@ public sealed class ProductServicesTests : IDisposable
             StokKartTipi = StokKartTipi.Mamul
         });
 
-        Assert.Equal("Kola", urun.Ad);
-        Assert.Equal("URN-001", urun.StokKartKodu);
+        Assert.Equal("Kola", stokKart.Ad);
+        Assert.Equal("URN-001", stokKart.StokKartKodu);
     }
 
     [Fact]
     public async Task Kategori_olusturulur()
     {
-        var kategori = await _urunKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto
+        var kategori = await _stokKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto
         {
             SubeId = 1,
             Ad = "Icecek",
@@ -75,7 +75,7 @@ public sealed class ProductServicesTests : IDisposable
     [Fact]
     public async Task Grup_olusturulur()
     {
-        var grup = await _urunGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto
+        var grup = await _stokGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto
         {
             SubeId = 1,
             Ad = "Hizli Tuketim",
@@ -89,10 +89,10 @@ public sealed class ProductServicesTests : IDisposable
     [Fact]
     public async Task StokKart_kategori_ve_grup_ile_kaydedilir()
     {
-        var kategori = await _urunKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto { SubeId = 1, Ad = "Icecek", Kod = "ICECEK" });
-        var grup = await _urunGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto { SubeId = 1, Ad = "Soguk", Kod = "SOGUK" });
+        var kategori = await _stokKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto { SubeId = 1, Ad = "Icecek", Kod = "ICECEK" });
+        var grup = await _stokGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto { SubeId = 1, Ad = "Soguk", Kod = "SOGUK" });
 
-        var urun = await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
+        var stokKart = await _stokKartServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
             KdvId = 1,
             SubeId = 1,
@@ -103,19 +103,19 @@ public sealed class ProductServicesTests : IDisposable
             StokGrupId = grup.Id
         });
 
-        Assert.Equal(kategori.Id, urun.StokKategoriId);
-        Assert.Equal("Icecek", urun.StokKategoriAd);
-        Assert.Equal(grup.Id, urun.StokGrupId);
-        Assert.Equal("Soguk", urun.StokGrupAd);
+        Assert.Equal(kategori.Id, stokKart.StokKategoriId);
+        Assert.Equal("Icecek", stokKart.StokKategoriAd);
+        Assert.Equal(grup.Id, stokKart.StokGrupId);
+        Assert.Equal("Soguk", stokKart.StokGrupAd);
     }
 
     [Fact]
     public async Task StokKart_listelemede_kategori_ve_grup_gorunur()
     {
-        var kategori = await _urunKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto { SubeId = 1, Ad = "Atistirmalik", Kod = "ATS" });
-        var grup = await _urunGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto { SubeId = 1, Ad = "Market", Kod = "MRK" });
+        var kategori = await _stokKategoriServisi.OlusturAsync(new StokKategoriOlusturRequestDto { SubeId = 1, Ad = "Atistirmalik", Kod = "ATS" });
+        var grup = await _stokGrupServisi.OlusturAsync(new StokGrupOlusturRequestDto { SubeId = 1, Ad = "Market", Kod = "MRK" });
 
-        await _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
+        await _stokKartServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
             KdvId = 1,
             SubeId = 1,
@@ -126,7 +126,7 @@ public sealed class ProductServicesTests : IDisposable
             StokGrupId = grup.Id
         });
 
-        var liste = await _urunServisi.StokKartListeleAsync("Cips", 1, 10);
+        var liste = await _stokKartServisi.StokKartListeleAsync("Cips", 1, 10);
 
         var kayit = Assert.Single(liste.Kayitlar);
         Assert.Equal(kategori.Id, kayit.StokKategoriId);
@@ -138,17 +138,17 @@ public sealed class ProductServicesTests : IDisposable
     [Fact]
     public async Task Ayni_barkod_iki_kez_eklenemez()
     {
-        var urun = await StokKartEkleAsync("URN-002", "Soda");
+        var stokKart = await StokKartEkleAsync("URN-002", "Soda");
         await _barkodServisi.BarkodOlusturAsync(new BarkodOlusturRequestDto
         {
-            StokKartId = urun.Id,
+            StokKartId = stokKart.Id,
             BarkodNo = "8690000000011",
             BarkodTipi = BarkodTipi.Ean
         });
 
         var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _barkodServisi.BarkodOlusturAsync(new BarkodOlusturRequestDto
         {
-            StokKartId = urun.Id,
+            StokKartId = stokKart.Id,
             BarkodNo = "8690000000011",
             BarkodTipi = BarkodTipi.Ean
         }));
@@ -157,12 +157,12 @@ public sealed class ProductServicesTests : IDisposable
     }
 
     [Fact]
-    public async Task Barkod_ile_urun_bulunur()
+    public async Task Barkod_ile_stok_kart_bulunur()
     {
-        var urun = await StokKartEkleAsync("URN-003", "Ayran");
+        var stokKart = await StokKartEkleAsync("URN-003", "Ayran");
         await _barkodServisi.BarkodOlusturAsync(new BarkodOlusturRequestDto
         {
-            StokKartId = urun.Id,
+            StokKartId = stokKart.Id,
             BarkodNo = "8690000000022",
             BarkodTipi = BarkodTipi.Ean
         });
@@ -170,16 +170,16 @@ public sealed class ProductServicesTests : IDisposable
         var barkod = await _barkodServisi.BarkodIleBulAsync("8690000000022");
 
         Assert.NotNull(barkod);
-        Assert.Equal(urun.Id, barkod!.StokKartId);
+        Assert.Equal(stokKart.Id, barkod!.StokKartId);
         Assert.Equal("Ayran", barkod.StokKartAd);
     }
 
     [Fact]
     public async Task Barkod_ile_varyant_bulunur()
     {
-        var urun = await StokKartEkleAsync("URN-004", "Tisort");
+        var stokKart = await StokKartEkleAsync("URN-004", "Tisort");
         var renk = await _renkServisi.OlusturAsync(new RenkOlusturRequestDto { SubeId = 1, Ad = "Kirmizi", Kod = "KRMZ" });
-        var varyant = await _urunServisi.StokKartVaryantOlusturAsync(urun.Id, new StokKartVaryantOlusturRequestDto
+        var varyant = await _stokKartServisi.StokKartVaryantOlusturAsync(stokKart.Id, new StokKartVaryantOlusturRequestDto
         {
             RenkId = renk.Id,
             VaryantKodu = "TS-KRMZ",
@@ -201,13 +201,13 @@ public sealed class ProductServicesTests : IDisposable
     }
 
     [Fact]
-    public async Task Ayni_urun_altinda_ayni_varyant_tekrar_eklenemez()
+    public async Task Ayni_stok_kart_altinda_ayni_varyant_tekrar_eklenemez()
     {
-        var urun = await StokKartEkleAsync("URN-005", "Gomlek");
+        var stokKart = await StokKartEkleAsync("URN-005", "Gomlek");
         var renk = await _renkServisi.OlusturAsync(new RenkOlusturRequestDto { SubeId = 1, Ad = "Mavi", Kod = "MAVI" });
         var beden = await _bedenServisi.OlusturAsync(new BedenOlusturRequestDto { SubeId = 1, Ad = "L", Kod = "L" });
 
-        await _urunServisi.StokKartVaryantOlusturAsync(urun.Id, new StokKartVaryantOlusturRequestDto
+        await _stokKartServisi.StokKartVaryantOlusturAsync(stokKart.Id, new StokKartVaryantOlusturRequestDto
         {
             RenkId = renk.Id,
             BedenId = beden.Id,
@@ -215,7 +215,7 @@ public sealed class ProductServicesTests : IDisposable
             BarkodluMu = true
         });
 
-        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _urunServisi.StokKartVaryantOlusturAsync(urun.Id, new StokKartVaryantOlusturRequestDto
+        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _stokKartServisi.StokKartVaryantOlusturAsync(stokKart.Id, new StokKartVaryantOlusturRequestDto
         {
             RenkId = renk.Id,
             BedenId = beden.Id,
@@ -229,9 +229,9 @@ public sealed class ProductServicesTests : IDisposable
     [Fact]
     public async Task Varyantta_renk_ve_beden_ikisi_bos_olamaz()
     {
-        var urun = await StokKartEkleAsync("URN-006", "Pantolon");
+        var stokKart = await StokKartEkleAsync("URN-006", "Pantolon");
 
-        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _urunServisi.StokKartVaryantOlusturAsync(urun.Id, new StokKartVaryantOlusturRequestDto
+        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _stokKartServisi.StokKartVaryantOlusturAsync(stokKart.Id, new StokKartVaryantOlusturRequestDto
         {
             VaryantKodu = "PNT-NULL",
             BarkodluMu = false
@@ -247,7 +247,7 @@ public sealed class ProductServicesTests : IDisposable
         await StokKartEkleAsync("URN-102", "Armut");
         await StokKartEkleAsync("URN-103", "Muz");
 
-        var sayfa = await _urunServisi.StokKartListeleAsync(null, 2, 2);
+        var sayfa = await _stokKartServisi.StokKartListeleAsync(null, 2, 2);
 
         Assert.Equal(3, sayfa.ToplamKayit);
         Assert.Equal(2, sayfa.Sayfa);
@@ -257,7 +257,7 @@ public sealed class ProductServicesTests : IDisposable
 
     private Task<StokKartDto> StokKartEkleAsync(string kod, string ad)
     {
-        return _urunServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
+        return _stokKartServisi.StokKartOlusturAsync(new StokKartOlusturRequestDto
         {
             KdvId = 1,
             SubeId = 1,
