@@ -57,6 +57,7 @@ public sealed class SessionIntegrationTests : IAsyncLifetime
                 new StokKartVaryant { Id = 20, TenantId = tenantB, SubeId = 2, StokKartId = 20, RenkId = 20, VaryantKodu = "B" },
                 new FiyatTipi { Id = 20, TenantId = tenantB, SubeId = 2, Kod = "B", Ad = "B" },
                 new StokKartFiyat { Id = 20, TenantId = tenantB, SubeId = 2, StokKartSatisBirimiId = 20, FiyatTipiId = 20, Fiyat = 10, ParaBirimKodu = "TRY" },
+                new StokKartFiyat { Id = 10, TenantId = tenantA, SubeId = 1, StokKartSatisBirimiId = 10, FiyatTipiId = 1, Fiyat = 1000, ParaBirimKodu = "TRY" },
                 new StokKart { Id = 10, TenantId = tenantA, SubeId = 1, StokKartKodu = "A", Ad = "Stock A", KdvId = 1 },
                 new StokKart { Id = 20, TenantId = tenantB, SubeId = 2, StokKartKodu = "B", Ad = "Stock B", KdvId = 20 },
                 new StokKartSatisBirimi { Id = 10, TenantId = tenantA, SubeId = 1, StokKartId = 10, BirimKodu = "ADET", BirimAdi = "Adet", Katsayi = 1, VarsayilanMi = true },
@@ -90,6 +91,128 @@ public sealed class SessionIntegrationTests : IAsyncLifetime
         client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
     }
 
+    [Theory]
+    [InlineData("/api/v1/satis/barkod/SAME?fiyatTipiId=1")]
+    [InlineData("/api/v1/satis/fiyat?stokKartSatisBirimiId=10&fiyatTipiId=1")]
+    [InlineData("/api/v1/fiyat-tipi")]
+    [InlineData("/api/v1/stok-kart/10/satis-birimleri")]
+    public async Task Satis_lookup_endpointleri_token_gerektirir(string path)
+        => Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(path)).StatusCode);
+
+    [Theory] [InlineData("1234", 4, 1, 10, 1000)] [InlineData("5678", 2, 20, 20, 10)]
+    public async Task Satis_lookup_ayni_barkodu_oturum_tenantindan_cozer(string pin, long device, long type, long stock, decimal price)
+    {
+        await Login(pin, device);
+        var response = await client.GetAsync($"/api/v1/satis/barkod/SAME?fiyatTipiId={type}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var data = (await response.Content.ReadFromJsonAsync<PanoPos.Application.Product.SatisStokDto>())!;
+        Assert.Equal(stock, data.StokKartId); Assert.Equal(price, data.Fiyat);
+        var manual = await client.GetFromJsonAsync<PanoPos.Application.Product.SatisStokDto>($"/api/v1/satis/fiyat?stokKartSatisBirimiId={stock}&fiyatTipiId={type}");
+        Assert.Equal(data.Fiyat, manual!.Fiyat);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/fiyat-tipi")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/stok-kart/{stock}/satis-birimleri")).StatusCode);
+    }
+
+    [Fact] public async Task Satis_lookup_baska_tenant_birimini_cozemez()
+    {
+        await Login();
+        Assert.False((await client.GetAsync("/api/v1/satis/fiyat?stokKartSatisBirimiId=20&fiyatTipiId=20")).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/stok-kart/20/satis-birimleri")).StatusCode);
+    }
+
+    [Theory] [InlineData(true)] [InlineData(false)]
+    public async Task Koli_barkodu_doviz_kdv_snapshot_stok_ve_perakende_kart_tam_akis(bool included)
+    {
+        await using (var setup = new PanoPosDbContext(options))
+        {
+            var price = await setup.StokKartFiyatlari.SingleAsync(x => x.Id == 10);
+            price.Fiyat = 10; price.ParaBirimKodu = " usd ";
+            (await setup.StokKartler.SingleAsync(x => x.Id == 10)).KdvId = 4;
+            var unit = await setup.StokKartSatisBirimleri.SingleAsync(x => x.Id == 10);
+            unit.BirimKodu = "KOLI"; unit.BirimAdi = "Koli"; unit.Katsayi = 24;
+            (await setup.TenantAyarlari.SingleAsync(x => x.TenantId == tenantA)).SatisFiyatlariKdvDahilMi = included;
+            await setup.SaveChangesAsync();
+        }
+        await Login();
+        var types = (await client.GetFromJsonAsync<PanoPos.Application.Common.SayfaliSonucDto<PanoPos.Application.Product.FiyatTipiListeDto>>("/api/v1/fiyat-tipi"))!;
+        var type = Assert.Single(types.Kayitlar, x => x.Id == 1);
+        var lookup = (await client.GetFromJsonAsync<PanoPos.Application.Product.SatisStokDto>($"/api/v1/satis/barkod/SAME?fiyatTipiId={type.Id}"))!;
+        Assert.Equal(10, lookup.Fiyat); Assert.Equal("USD", lookup.FiyatParaBirimKodu); Assert.Equal(24, lookup.Katsayi);
+        var created = await Post("/api/v1/siparis", new { SiparisTipi = 2, ParaBirimKodu = " try ", Kur = 1 });
+        var id = created.GetProperty("id").GetInt64();
+        await Post($"/api/v1/siparis/{id}/satir", new {
+            lookup.StokKartId, lookup.StokKartSatisBirimiId, FiyatTipiId = type.Id,
+            Miktar = 1, BirimFiyat = 0.01m, FiyatParaBirimKodu = "EUR", FiyatKur = 42.50m });
+        var order = (await client.GetFromJsonAsync<PanoPos.Application.Order.SiparisDto>($"/api/v1/siparis/{id}"))!;
+        var line = Assert.Single(order.Detaylar);
+        Assert.Equal("TRY", order.ParaBirimKodu); Assert.Equal(425m, line.BirimFiyat);
+        Assert.Equal("USD", line.FiyatParaBirimKodu); Assert.Equal(42.50m, line.FiyatKur);
+        Assert.Equal(type.Id, line.FiyatTipiId); Assert.Equal(24, line.BirimKatsayi);
+        Assert.Equal(20, line.KdvOrani); Assert.Equal(included, line.KdvDahilMi);
+        Assert.Equal(included ? 354.17m : 425m, line.Matrah);
+        Assert.Equal(included ? 70.83m : 85m, line.KdvTutari);
+        Assert.Equal(included ? 425m : 510m, order.NetToplam);
+        await using (var setup = new PanoPosDbContext(options))
+        {
+            (await setup.StokKartFiyatlari.SingleAsync(x => x.Id == 10)).Fiyat = 999;
+            (await setup.Kdvler.SingleAsync(x => x.Id == 4)).Oran = 25;
+            (await setup.StokKartSatisBirimleri.SingleAsync(x => x.Id == 10)).Katsayi = 48;
+            await setup.SaveChangesAsync();
+        }
+        var unchanged = (await client.GetFromJsonAsync<PanoPos.Application.Order.SiparisDto>($"/api/v1/siparis/{id}"))!;
+        Assert.Equal(line.BirimFiyat, unchanged.Detaylar[0].BirimFiyat);
+        Assert.Equal(line.KdvOrani, unchanged.Detaylar[0].KdvOrani);
+        var invoiceJson = await Post("/api/v1/fatura/olustur-siparisten", new { SiparisId = id });
+        var invoiceId = invoiceJson.GetProperty("id").GetInt64();
+        var invoice = (await client.GetFromJsonAsync<PanoPos.Application.Invoice.FaturaDto>($"/api/v1/fatura/{invoiceId}"))!;
+        var detail = Assert.Single(invoice.Detaylar);
+        Assert.Equal(line.BirimFiyat, detail.BirimFiyat); Assert.Equal(line.FiyatKur, detail.FiyatKur);
+        Assert.Equal(line.FiyatParaBirimKodu, detail.FiyatParaBirimKodu); Assert.Equal(line.FiyatTipiId, detail.FiyatTipiId);
+        Assert.Equal(line.KdvOrani, detail.KdvOrani); Assert.Equal(line.KdvDahilMi, detail.KdvDahilMi);
+        Assert.Equal(line.KdvTutari, detail.KdvTutari); Assert.Equal(line.Matrah, detail.Matrah);
+        Assert.Equal(line.BirimKatsayi, detail.BirimKatsayi);
+        await Post("/api/v1/tahsilat", new { FaturaId = invoiceId, OdemeTipi = OdemeTipi.KrediKarti,
+            BankaId = 10, Tutar = invoice.NetToplam, ParaBirimKodu = "TRY", Kur = 1 });
+        var paid = (await client.GetFromJsonAsync<PanoPos.Application.Invoice.FaturaDto>($"/api/v1/fatura/{invoiceId}"))!;
+        Assert.Equal(0, paid.KalanTutar); Assert.Equal(425, paid.Detaylar[0].BirimFiyat);
+        Assert.Equal(1, paid.Detaylar[0].FiyatTipiId);
+        await using var verify = new PanoPosDbContext(options);
+        var fis = await verify.StokFisleri.SingleAsync(x => x.FaturaId == invoiceId);
+        var movement = await verify.StokHareketleri.SingleAsync(x => x.StokFisId == fis.Id);
+        Assert.Equal(-24, movement.Miktar);
+    }
+
+    [Theory] [InlineData("1234", 4, 10, 20)] [InlineData("5678", 2, 20, 10)]
+    public async Task Kategori_filtreli_katalog_oturum_tenantini_asamaz(string pin, long device, long own, long foreign)
+    {
+        await using (var setup = new PanoPosDbContext(options))
+        {
+            setup.Add(new StokKategori { Id = 10, TenantId = tenantA, SubeId = 1, Kod = "A", Ad = "A" });
+            (await setup.StokKartler.SingleAsync(x => x.Id == 10)).StokKategoriId = 10;
+            (await setup.StokKartler.SingleAsync(x => x.Id == 20)).StokKategoriId = 20;
+            await setup.SaveChangesAsync();
+        }
+        await Login(pin, device);
+        var ownResult = (await client.GetFromJsonAsync<PanoPos.Application.Common.SayfaliSonucDto<PanoPos.Application.Product.StokKartListeItemDto>>($"/api/v1/stok-kart?kategoriId={own}&arama=Stock&page=1&pageSize=1&aktifMi=true"))!;
+        Assert.Equal(1, ownResult.ToplamKayit); Assert.Equal(own, Assert.Single(ownResult.Kayitlar).Id);
+        var foreignResult = (await client.GetFromJsonAsync<PanoPos.Application.Common.SayfaliSonucDto<PanoPos.Application.Product.StokKartListeItemDto>>($"/api/v1/stok-kart?kategoriId={foreign}&page=1&pageSize=1"))!;
+        Assert.Equal(0, foreignResult.ToplamKayit); Assert.Empty(foreignResult.Kayitlar);
+    }
+
+    [Fact] public void Satis_swagger_yollari_ve_filtreleri_yayinlanir()
+    {
+        var swagger = app.Services.GetRequiredService<Swashbuckle.AspNetCore.Swagger.ISwaggerProvider>().GetSwagger("v1");
+        foreach (var path in new[] { "/api/v1/satis/barkod/{barkodNo}", "/api/v1/satis/fiyat", "/api/v1/fiyat-tipi", "/api/v1/stok-kart/{id}/satis-birimleri" })
+            Assert.True(swagger.Paths[path].Operations.ContainsKey(Microsoft.OpenApi.Models.OperationType.Get));
+        var lookup = swagger.Paths["/api/v1/satis/fiyat"].Operations[Microsoft.OpenApi.Models.OperationType.Get];
+        Assert.Contains(lookup.Parameters, x => x.Name == "fiyatTipiId");
+        Assert.Contains(lookup.Parameters, x => x.Name == "stokKartSatisBirimiId");
+        Assert.DoesNotContain(lookup.Parameters, x => x.Name == "tenantId");
+        var list = swagger.Paths["/api/v1/stok-kart"].Operations[Microsoft.OpenApi.Models.OperationType.Get];
+        foreach (var name in new[] { "kategoriId", "grupId", "arama", "page", "pageSize" })
+            Assert.Contains(list.Parameters, x => x.Name == name);
+    }
+
     private async Task<LoginResponseDto> Login(string pin = "1234", long device = 4)
     {
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { Pin = pin, CihazId = device });
@@ -110,7 +233,7 @@ public sealed class SessionIntegrationTests : IAsyncLifetime
     {
         var order = await Post("/api/v1/siparis", new { SiparisTipi = 2, ParaBirimKodu = "TRY", Kur = 1 });
         var id = order.GetProperty("id").GetInt64();
-        await Post($"/api/v1/siparis/{id}/satir", new { StokKartId = 10, StokKartSatisBirimiId = 10, Miktar = 1, BirimFiyat = 1000 });
+        await Post($"/api/v1/siparis/{id}/satir", new { StokKartId = 10, StokKartSatisBirimiId = 10, FiyatTipiId = 1, Miktar = 1, BirimFiyat = 1000 });
         return id;
     }
 
@@ -328,7 +451,7 @@ public sealed class SessionIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, (await client.PutAsJsonAsync("/api/v1/stok-kart-fiyat/20",
             new { Fiyat = 999, ParaBirimKodu = "USD", AktifMi = true })).StatusCode);
         await using var db = new PanoPosDbContext(options);
-        Assert.Equal(10, (await db.StokKartFiyatlari.SingleAsync()).Fiyat);
+        Assert.Equal(10, (await db.StokKartFiyatlari.SingleAsync(x => x.Id == 20)).Fiyat);
     }
 
     [Theory]

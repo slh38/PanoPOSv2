@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<ITahsilatServisi, TahsilatServisi>();
         services.AddScoped<IBankaServisi, BankaServisi>();
         services.AddScoped<IStokKartServisi, StokKartServisi>();
+        services.AddScoped<ISatisStokCozumServisi, SatisStokCozumServisi>();
         services.AddScoped<IBarkodServisi, BarkodServisi>();
         services.AddScoped<IRenkServisi, RenkServisi>();
         services.AddScoped<IBedenServisi, BedenServisi>();

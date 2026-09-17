@@ -17,6 +17,14 @@ public sealed class FaturaDetayDto
     public string? VaryantKodu { get; set; }
     public decimal Miktar { get; set; }
     public decimal BirimFiyat { get; set; }
+    public long? FiyatTipiId { get; set; }
+    public string? FiyatTipiAdi { get; set; }
+    public long? StokKartSatisBirimiId { get; set; }
+    public string? BirimKodu { get; set; }
+    public string? BirimAdi { get; set; }
+    public decimal? BirimKatsayi { get; set; }
+    public string FiyatParaBirimKodu { get; set; } = string.Empty;
+    public decimal FiyatKur { get; set; }
     public decimal SatirAraToplam { get; set; }
     public decimal? IndirimOrani { get; set; }
     public decimal IndirimTutari { get; set; }

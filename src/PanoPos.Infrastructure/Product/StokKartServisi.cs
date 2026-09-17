@@ -127,9 +127,9 @@ public sealed class StokKartServisi : IStokKartServisi
         };
     }
 
-    public async Task<SayfaliSonucDto<StokKartListeItemDto>> StokKartListeleAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<SayfaliSonucDto<StokKartListeItemDto>> StokKartListeleAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default, long? kategoriId = null, long? grupId = null, bool? aktifMi = null)
     {
-        if (page <= 0 || pageSize <= 0)
+        if (page <= 0 || pageSize is < 1 or > 200 || (long)(page - 1) * pageSize > int.MaxValue)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
@@ -143,8 +143,12 @@ public sealed class StokKartServisi : IStokKartServisi
         var pattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
         var countSql = @"SELECT COUNT(1)
 FROM StokKart u
+JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
 WHERE u.SilindiMi = 0
   AND (@TenantId IS NULL OR u.TenantId = @TenantId)
+  AND (@KategoriId IS NULL OR u.StokKategoriId = @KategoriId)
+  AND (@GrupId IS NULL OR u.StokGrupId = @GrupId)
+  AND (@AktifMi IS NULL OR u.AktifMi = @AktifMi)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search);";
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
@@ -152,25 +156,31 @@ WHERE u.SilindiMi = 0
             ? @"SELECT u.Id, u.KdvId, k.Oran AS KdvOrani, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
 FROM StokKart u
 JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
-LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
-LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
+LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0 AND uk.TenantId = u.TenantId
+LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0 AND ug.TenantId = u.TenantId
 WHERE u.SilindiMi = 0
   AND (@TenantId IS NULL OR u.TenantId = @TenantId)
+  AND (@KategoriId IS NULL OR u.StokKategoriId = @KategoriId)
+  AND (@GrupId IS NULL OR u.StokGrupId = @GrupId)
+  AND (@AktifMi IS NULL OR u.AktifMi = @AktifMi)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search)
-ORDER BY u.Ad
+ORDER BY u.Ad, u.Id
 LIMIT @Take OFFSET @Skip;"
             : @"SELECT u.Id, u.KdvId, k.Oran AS KdvOrani, u.StokKartKodu, u.Ad, u.StokKartTipi, u.StokKategoriId, uk.Ad AS StokKategoriAd, u.StokGrupId, ug.Ad AS StokGrupAd, u.AktifMi
 FROM StokKart u
 JOIN Kdv k ON k.Id=u.KdvId AND k.TenantId=u.TenantId
-LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0
-LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0
+LEFT JOIN StokKategori uk ON uk.Id = u.StokKategoriId AND uk.SilindiMi = 0 AND uk.TenantId = u.TenantId
+LEFT JOIN StokGrup ug ON ug.Id = u.StokGrupId AND ug.SilindiMi = 0 AND ug.TenantId = u.TenantId
 WHERE u.SilindiMi = 0
   AND (@TenantId IS NULL OR u.TenantId = @TenantId)
+  AND (@KategoriId IS NULL OR u.StokKategoriId = @KategoriId)
+  AND (@GrupId IS NULL OR u.StokGrupId = @GrupId)
+  AND (@AktifMi IS NULL OR u.AktifMi = @AktifMi)
   AND (@Search IS NULL OR u.Ad LIKE @Search OR u.StokKartKodu LIKE @Search)
-ORDER BY u.Ad
+ORDER BY u.Ad, u.Id
 OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
-        var parameters = new { TenantId = _dbContext.Baglam()?.TenantId, Search = pattern, Skip = (page - 1) * pageSize, Take = pageSize };
+        var parameters = new { TenantId = _dbContext.Baglam()?.TenantId, Search = pattern, KategoriId = kategoriId, GrupId = grupId, AktifMi = aktifMi, Skip = (page - 1) * pageSize, Take = pageSize };
         var toplamKayit = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: cancellationToken));
         var kayitlar = (await connection.QueryAsync<StokKartListeItemDto>(new CommandDefinition(listSql, parameters, cancellationToken: cancellationToken))).ToList();
 

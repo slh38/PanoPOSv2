@@ -2422,3 +2422,102 @@ Desktop, appsettings.json ve CODEX_RULES.md korunmuştur. Commit/push yapılmad�
 Barkod-birim-fiyat lookup, döviz dönüşümü, bekleyen sipariş düzenleme,
 ödeme concurrency/idempotency, FaturaKapat davranışı, fiş response ve
 tahsilat-vardiya entegrasyonu bilinçli olarak sonraki görevlere bırakılmıştır.
+
+---
+
+# 89. SATIŞ BARKOD / BİRİM / FİYAT ÇÖZÜMÜ
+
+Satış lookup uçları Bearer oturumu gerektirir; TenantId istemciden alınmaz.
+ISatisStokCozumServisi / SatisStokCozumServisi barkod ve manuel birim seçimi
+için aynı fiyat çözümünü kullanır. Master ilişkiler aktif, silinmemiş ve aynı
+tenant kapsamında doğrulanır. Varyant ana stok kartına, birim de bu karta
+ait olmalıdır. Varyant için ayrı fiyat motoru yoktur; mevcut satış birimi
+ve fiyat tipi kombinasyonu kullanılır.
+
+Endpointler:
+
+- GET /api/v1/satis/barkod/{barkodNo}?fiyatTipiId=...
+- GET /api/v1/satis/fiyat?stokKartSatisBirimiId=...&fiyatTipiId=...
+  (isteğe bağlı stokKartVaryantId)
+- GET /api/v1/fiyat-tipi?page=1&pageSize=50
+- GET /api/v1/stok-kart/{id}/satis-birimleri?page=1&pageSize=50
+- GET /api/v1/stok-kart: mevcut search parametresine ek olarak arama,
+  kategoriId, grupId, aktifMi filtreleri; page/pageSize sınırı 1-200.
+  POS aktifMi=true kullanır. Yönetim listesinin pasif kayıtları okuyabilmesi
+  korunmuştur; satış çözümü pasif master kayıtlarını kabul etmez.
+
+Fiyat tipi için varsayılan ayar olmadığı için FiyatTipiId zorunludur.
+Fiyat bulunamazsa başka tipe fallback yapılmaz. Barkodun mevcut nullable
+StokKartSatisBirimiId alanı korunur; bağlantısı eksik barkod satış lookup'ta
+açık hata verir, varsayılan birim tahmin edilmez. Birimsiz sipariş isteğinde
+mevcut tek aktif varsayılan birim çözümü korunur; hiç birim yoksa reddedilir.
+
+Lookup Fiyat alanı master para birimindedir. SiparisSatirEkle artık istemci
+BirimFiyat/FiyatParaBirimKodu değerlerini fiyat kaynağı kabul etmez; kayıtlı
+StokKartFiyat'ı kullanır. FiyatTipiId ödeme tipinden bağımsızdır. Ödeme seçimi
+fiyat snapshotını değiştirmez. Manuel fiyat yetkisi eklenmemiştir.
+
+FiyatKur, 1 birim fiyat para biriminin belge para birimi karşılığıdır.
+Aynı para biriminde gönderilen kurdan bağımsız olarak 1 kullanılır.
+Farklı para biriminde açık, pozitif ve decimal(18,6)'ya sığan kur zorunludur;
+belgenin Kur alanı sessiz fallback olarak kullanılmaz. TCMB/kur servisi yoktur.
+Master fiyat * FiyatKur, dört ondalığa AwayFromZero ile yuvarlanır ve
+SiparisDetay.BirimFiyat'a BELGE para biriminde yazılır. Örneğin 10 USD,
+42.50 satış kuru ve TRY belge için 425.0000 kaydedilir. Tutar taşması reddedilir.
+Para birimleri trim/uppercase edilir; belirli döviz kodlarına sınır konulmaz.
+
+SiparisDetay ve FaturaDetay FiyatTipiId/FiyatTipiAdi snapshotları taşır.
+Eski satırlar için nullable tutulur; geçmiş ticari belgeler yeniden hesaplanmaz.
+Birim, katsayı, fiyat tipi, fiyat para birimi, satış kuru, dönüştürülmüş fiyat
+ve mevcut KDV snapshotları siparişten faturaya kopyalanır; fatura oluştururken
+güncel master fiyat yeniden çözülmez. KDV dahil/haric motoru değiştirilmemiştir.
+Sipariş/fatura detay DTO'ları da birim, fiyat tipi ve kur snapshotlarını döner.
+
+Migration: 20260917132714_AddSalesPriceTypeSnapshots. PanoPosDb üzerine
+uygulandı; veri silinmedi. Barkod ilişki şeması zaten yeterli olduğundan
+değiştirilmedi. SQL Server bağlantısındaki mevcut TLS 1.0 uyarısı sürmektedir.
+Mevcut 361 test silinmeden, fiyat fixture'ları master kayıtlarla güncellendi.
+61 yeni SQLite/HTTP testiyle toplam 422/422 test başarılıdır.
+Solution build başarılıdır (0 hata); mevcut Desktop WindowsBase uyarısı
+sürmektedir. Model ile migration arasında bekleyen değişiklik yoktur.
+Desktop ve kullanıcı configuration dosyaları değiştirilmedi; yeni Desktop
+oturum ve zorunlu fiyat tipi sözleşmesini ayrıca kullanmalıdır.
+
+Görev 2 devam kontrolünde üretim davranışını yeniden yazmak gerekmedi.
+Mevcut 422 test korunarak 9 ek test eklendi; toplam 431/431 test başarılıdır.
+Login/Bearer -> fiyat tipi listesi -> koli barkodu -> dövizli sipariş ->
+fatura -> stok -> kredi kartı tahsilatı gerçek HTTP ve SQLite ile doğrulandı.
+Swagger yolları/parametreleri test edildi. Build 0 hata ve mevcut 1 Desktop
+WindowsBase uyarısıyla başarılıdır. Database update veritabanının güncel
+olduğunu doğruladı; yeni migration veya mevcut migration değişikliği yoktur.
+
+Kesilen test maddelerinin doğrulama özeti:
+
+| Madde | Doğrulanan davranış |
+| --- | --- |
+| 10 | Lookup ve siparişte fiyat yoksa price_not_found; başka tipe fallback yok. |
+| 11 | 10 USD * 42.50 = 425.0000 TRY, servis ve HTTP akışında doğrulandı. |
+| 12 | USD fiyat / USD belge için fiyat değişmez ve FiyatKur=1. |
+| 13 | Farklı para biriminde boş/sıfır/negatif kur reddedilir, satır oluşmaz. |
+| 14 | Aynı para biriminde boş/sıfır/negatif/42.50 girişine rağmen FiyatKur=1. |
+| 15 | Master ve belge para birimi trim/uppercase davranışı korunur. |
+| 16 | KDV dahil 425 tutar: matrah 354.17, KDV 70.83. |
+| 17 | KDV hariç 425 tutar: matrah 425, KDV 85, toplam 510. |
+| 18 | İstemci 0.01 fiyat ve yanlış para birimi gönderse de master fiyat kullanılır. |
+| 19 | Seçilen FiyatTipiId sipariş satırında snapshot saklanır. |
+| 20 | Master fiyat değiştikten sonra sipariş tekrar okunur; eski fiyat korunur. |
+| 21 | Fiyat/kur/KDV dahil-oran-matrah-tutar snapshotları faturaya aynen geçer. |
+| 22 | Barkodsuz satış birimleri aktif ve sayfalı okunur. |
+| 23 | Manuel birim/fiyat tipi çözümü barkodla aynı fiyatı döndürür. |
+| 24 | Kategori filtreli HTTP katalog sorgusu iki tenant için ayrı doğrulandı. |
+| 25 | Barkod/stok/varyant/birim/fiyat/tip/KDV tenant kontrolleri korunur. |
+| 26 | Koli barkodu Katsayi=24; master 48 olsa bile faturada stok çıkışı -24. |
+| 27 | Perakende fiyatlı fatura kartla ödenir; fiyat tipi ve tutar değişmez. |
+| 28 | Mevcut satış/fatura/stok/tahsilat regresyon testleri başarılı. |
+| 29 | Mevcut alış faturası/stok regresyon testleri başarılı. |
+| 30 | Mevcut stok maliyet regresyon testleri başarılı. |
+
+Ödeme idempotency/concurrency, FaturaKapat, bekleyen sipariş düzenleme,
+fiş response, Tahsilat/Vardiya, manuel fiyat yetkisi ve otomatik kur servisi
+bilinçli olarak kapsam dışıdır. Kullanıcı dosyaları korunmuştur;
+bu doğrulama çalışmasında commit/push yapılmamıştır.

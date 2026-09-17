@@ -227,7 +227,7 @@ public sealed class FaturaServisiTests : IDisposable
             GenelIndirimTutari = genelIndirimTutari
         });
 
-        await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,

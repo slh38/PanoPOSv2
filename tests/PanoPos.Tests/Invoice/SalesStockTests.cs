@@ -42,7 +42,7 @@ public sealed class SalesStockTests : IDisposable
     {
         var o = await orders.SiparisOlusturAsync(new() { SubeId = 1, Kur = 1, ParaBirimKodu = "TRY",
             SiparisTipi = adisyon.HasValue ? SiparisTipi.Masa : SiparisTipi.HizliSatisBekleyen, AdisyonId = adisyon, CariId = cari });
-        await orders.SiparisSatirEkleAsync(o.Id, new() { StokKartId = stock.Id, StokKartVaryantId = variant,
+        await orders.KayitliFiyatlaSatirEkleAsync(db, o.Id, new() { StokKartId = stock.Id, StokKartVaryantId = variant,
             StokKartSatisBirimiId = unit.Id, Miktar = quantity, BirimFiyat = price });
         return o.Id;
     }
@@ -159,7 +159,7 @@ public sealed class SalesStockTests : IDisposable
         var variant = new StokKartVaryant { TenantId = tenant, SubeId = 1, StokKartId = stock.Id, VaryantKodu = "V1", RenkId = color.Id };
         db.Add(variant); await db.SaveChangesAsync();
         var id = await Order(2, variant: variant.Id);
-        await orders.SiparisSatirEkleAsync(id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id, Miktar = 3, BirimFiyat = 100 });
+        await orders.KayitliFiyatlaSatirEkleAsync(db, id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id, Miktar = 3, BirimFiyat = 100 });
         await Invoice(id);
         var movements = await db.StokHareketleri.ToListAsync();
         Assert.Equal(-2, movements.Single(x => x.StokKartVaryantId == variant.Id).Miktar);

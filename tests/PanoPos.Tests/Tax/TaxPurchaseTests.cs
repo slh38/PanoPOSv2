@@ -111,7 +111,7 @@ public sealed class TaxPurchaseTests : IDisposable
         var service=new SiparisServisi(db);
         var sip=await service.SiparisOlusturAsync(new(){SubeId=1,SiparisTipi=SiparisTipi.HizliSatisBekleyen,ParaBirimKodu="TRY",Kur=1});
         ayar.SatisFiyatlariKdvDahilMi=!dahil;await db.SaveChangesAsync();
-        sip=await service.SiparisSatirEkleAsync(sip.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=10,BirimFiyat=fiyat,IndirimOrani=10});
+        sip=await service.KayitliFiyatlaSatirEkleAsync(db, sip.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=10,BirimFiyat=fiyat,IndirimOrani=10});
         Assert.Equal(dahil,sip.Detaylar[0].KdvDahilMi);
         Assert.Equal(900,sip.ToplamMatrah);Assert.Equal(180,sip.ToplamKdv);
         var master=await db.Kdvler.SingleAsync(x=>x.Id==4);master.Oran=25;await db.SaveChangesAsync();
@@ -209,7 +209,7 @@ public sealed class TaxPurchaseTests : IDisposable
     [Fact] public async Task Satis_fatura_tahsilat_tam_akis() {
         var s=new SiparisServisi(db);
         var order=await s.SiparisOlusturAsync(new(){SubeId=1,SiparisTipi=SiparisTipi.HizliSatisBekleyen,ParaBirimKodu="TRY",Kur=1});
-        order=await s.SiparisSatirEkleAsync(order.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=1,BirimFiyat=120});
+        order=await s.KayitliFiyatlaSatirEkleAsync(db, order.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=1,BirimFiyat=120});
         var invoice=await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new(){SiparisId=order.Id});
         var kasa=new Kasa {TenantId=stok.TenantId,SubeId=1,Ad="Test kasa"};db.Add(kasa);await db.SaveChangesAsync();
         await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new(){
@@ -221,9 +221,9 @@ public sealed class TaxPurchaseTests : IDisposable
     [Fact] public async Task Satis_ek_satir_eski_kdv_snapshotini_degistirmez() {
         var s=new SiparisServisi(db);
         var order=await s.SiparisOlusturAsync(new(){SubeId=1,SiparisTipi=SiparisTipi.HizliSatisBekleyen,ParaBirimKodu="TRY",Kur=1,GenelIndirimOrani=10});
-        order=await s.SiparisSatirEkleAsync(order.Id,new(){StokKartId=stok.Id,Miktar=1,BirimFiyat=120});
+        order=await s.KayitliFiyatlaSatirEkleAsync(db, order.Id,new(){StokKartId=stok.Id,Miktar=1,BirimFiyat=120});
         var k=await db.Kdvler.SingleAsync(x=>x.Id==4);k.Oran=25;await db.SaveChangesAsync();
-        order=await s.SiparisSatirEkleAsync(order.Id,new(){StokKartId=stok.Id,Miktar=1,BirimFiyat=125});
+        order=await s.KayitliFiyatlaSatirEkleAsync(db, order.Id,new(){StokKartId=stok.Id,Miktar=1,BirimFiyat=125});
         Assert.Equal(20,order.Detaylar[0].KdvOrani);Assert.Equal(25,order.Detaylar[1].KdvOrani);
         Assert.Equal(order.NetToplam,order.Detaylar.Sum(x=>x.SatirNetToplam));
         Assert.Equal(order.ToplamKdv,order.Detaylar.Sum(x=>x.KdvTutari));

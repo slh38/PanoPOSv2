@@ -75,7 +75,7 @@ public sealed class SiparisServisiTests : IDisposable
         var stokKart = await StokKartEkleAsync("Kahve");
         var siparis = await YeniSiparisAsync();
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,
@@ -139,7 +139,7 @@ public sealed class SiparisServisiTests : IDisposable
         var stokKart = await StokKartEkleAsync("Pasta");
         var siparis = await YeniSiparisAsync();
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,
@@ -158,7 +158,7 @@ public sealed class SiparisServisiTests : IDisposable
         var stokKart = await StokKartEkleAsync("Cheesecake");
         var siparis = await YeniSiparisAsync();
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,
@@ -176,7 +176,7 @@ public sealed class SiparisServisiTests : IDisposable
         var stokKart = await StokKartEkleAsync("Cookie");
         var siparis = await YeniSiparisAsync();
 
-        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var ex = await Assert.ThrowsAsync<UygulamaHatasi>(() => _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 1,
@@ -201,7 +201,7 @@ public sealed class SiparisServisiTests : IDisposable
             GenelIndirimOrani = 10m
         });
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,
@@ -226,7 +226,7 @@ public sealed class SiparisServisiTests : IDisposable
             GenelIndirimTutari = 20m
         });
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart.Id,
             Miktar = 2,
@@ -282,7 +282,7 @@ public sealed class SiparisServisiTests : IDisposable
             GenelIndirimTutari = 5m
         });
 
-        await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart1.Id,
             Miktar = 2,
@@ -290,7 +290,7 @@ public sealed class SiparisServisiTests : IDisposable
             IndirimTutari = 10m
         });
 
-        var guncel = await _siparisServisi.SiparisSatirEkleAsync(siparis.Id, new SiparisSatirEkleRequestDto
+        var guncel = await _siparisServisi.KayitliFiyatlaSatirEkleAsync(_dbContext, siparis.Id, new SiparisSatirEkleRequestDto
         {
             StokKartId = stokKart2.Id,
             Miktar = 1,

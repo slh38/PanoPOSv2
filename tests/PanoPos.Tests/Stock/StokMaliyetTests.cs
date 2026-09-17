@@ -57,7 +57,7 @@ public sealed class StokMaliyetTests : IDisposable
     {
         var orders = new SiparisServisi(db);
         var order = await orders.SiparisOlusturAsync(new() { SubeId = 1, SiparisTipi = SiparisTipi.HizliSatisBekleyen, ParaBirimKodu = "TRY", Kur = 1 });
-        await orders.SiparisSatirEkleAsync(order.Id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id,
+        await orders.KayitliFiyatlaSatirEkleAsync(db, order.Id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id,
             StokKartVaryantId = variant, Miktar = qty, BirimFiyat = 100 });
         return await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new() { SiparisId = order.Id, DepoId = depo });
     }
@@ -362,7 +362,7 @@ public sealed class StokMaliyetTests : IDisposable
         unit.Katsayi = 24; await db.SaveChangesAsync();
         var orders = new SiparisServisi(db);
         var order = await orders.SiparisOlusturAsync(new() { SubeId = 1, Kur = 1, ParaBirimKodu = "TRY" });
-        await orders.SiparisSatirEkleAsync(order.Id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id, Miktar = 2, BirimFiyat = 300 });
+        await orders.KayitliFiyatlaSatirEkleAsync(db, order.Id, new() { StokKartId = stock.Id, StokKartSatisBirimiId = unit.Id, Miktar = 2, BirimFiyat = 300 });
         unit.Katsayi = 30; await db.SaveChangesAsync();
         var invoice = await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new() { SiparisId = order.Id });
         Assert.Equal(240, Assert.Single(invoice.Detaylar).BirimMaliyet);

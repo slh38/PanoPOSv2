@@ -34,9 +34,10 @@ public sealed class StokKartController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<SayfaliSonucDto<StokKartListeItemDto>>> Listele([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<SayfaliSonucDto<StokKartListeItemDto>>> Listele([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default,
+        [FromQuery] long? kategoriId = null, [FromQuery] long? grupId = null, [FromQuery] string? arama = null, [FromQuery] bool? aktifMi = null)
     {
-        return Ok(await _stokKartServisi.StokKartListeleAsync(search, page, pageSize, cancellationToken));
+        return Ok(await _stokKartServisi.StokKartListeleAsync(arama ?? search, page, pageSize, cancellationToken, kategoriId, grupId, aktifMi));
     }
 
     [HttpPost("{stokKartId:long}/varyant")]

@@ -19,6 +19,8 @@ public sealed class SiparisDetay : BaseEntity
     public decimal? BirimKatsayi { get; set; }
     public decimal Miktar { get; set; }
     public decimal BirimFiyat { get; set; }
+    public long? FiyatTipiId { get; set; }
+    public string? FiyatTipiAdi { get; set; }
     public decimal SatirAraToplam { get; set; }
     public string FiyatParaBirimKodu { get; set; } = "TRY";
     public decimal FiyatKur { get; set; } = 1m;

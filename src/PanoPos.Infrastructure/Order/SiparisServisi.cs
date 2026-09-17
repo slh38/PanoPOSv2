@@ -1,4 +1,5 @@
 using PanoPos.Application.Tax;
+using PanoPos.Infrastructure.Product;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
@@ -111,10 +112,9 @@ public sealed class SiparisServisi : ISiparisServisi
 
     public async Task<SiparisDto> SiparisSatirEkleAsync(long id, SiparisSatirEkleRequestDto request, CancellationToken cancellationToken = default)
     {
-        if (request.StokKartId <= 0 || request.Miktar <= 0 || request.BirimFiyat < 0 ||
-            decimal.Round(request.BirimFiyat, 4) != request.BirimFiyat || decimal.Round(request.Miktar, 3) != request.Miktar)
+        if (request.StokKartId <= 0 || request.Miktar <= 0 || decimal.Round(request.Miktar, 3) != request.Miktar)
         {
-            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKartId, Miktar ve BirimFiyat gecersiz.", "siparis_line_invalid");
+            throw new UygulamaHatasi(400, "Gecersiz istek", "StokKartId veya Miktar gecersiz.", "siparis_line_invalid");
         }
 
         SiparisSatirIndirimKontrolu(request.IndirimOrani, request.IndirimTutari);
@@ -157,10 +157,11 @@ public sealed class SiparisServisi : ISiparisServisi
                 throw new UygulamaHatasi(400, "Gecersiz birim", "Birden fazla varsayilan satis birimi var.", "sales_unit_invalid");
             birim = varsayilanlar.SingleOrDefault();
         }
-        var fiyatParaBirimi = (request.FiyatParaBirimKodu ?? siparis.ParaBirimKodu).Trim().ToUpperInvariant();
-        var fiyatKur = fiyatParaBirimi == "TRY" ? 1m : request.FiyatKur ?? siparis.Kur;
-        if (fiyatParaBirimi.Length is < 1 or > 10 || fiyatKur <= 0)
-            throw new UygulamaHatasi(400, "Gecersiz kur", "Fiyat para birimi veya kuru gecersiz.", "price_currency_invalid");
+        if (birim == null)
+            throw new UygulamaHatasi(400, "Gecersiz birim", "Satis birimi secilmelidir.", "sales_unit_required");
+        var fiyat = await new SatisStokCozumServisi(_dbContext).CozAsync(siparis.TenantId, birim.Id,
+            request.FiyatTipiId ?? 0, request.StokKartVaryantId, cancellationToken);
+        var belgeFiyati = SatisStokCozumServisi.BelgeFiyati(fiyat, siparis.ParaBirimKodu, request.FiyatKur);
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var detay = new SiparisDetay
         {
@@ -170,10 +171,11 @@ public sealed class SiparisServisi : ISiparisServisi
             StokKartId = request.StokKartId,
             KdvId = kdv.Id, KdvOrani = kdv.Oran, KdvDahilMi = siparis.KdvDahilMi,
             StokKartSatisBirimiId = birim?.Id, BirimKodu = birim?.BirimKodu, BirimAdi = birim?.BirimAdi, BirimKatsayi = birim?.Katsayi,
-            FiyatParaBirimKodu = fiyatParaBirimi, FiyatKur = fiyatKur,
+            FiyatTipiId = fiyat.FiyatTipiId, FiyatTipiAdi = fiyat.FiyatTipiAdi,
+            FiyatParaBirimKodu = fiyat.FiyatParaBirimKodu, FiyatKur = belgeFiyati.Kur,
             StokKartVaryantId = request.StokKartVaryantId,
             Miktar = request.Miktar,
-            BirimFiyat = request.BirimFiyat,
+            BirimFiyat = belgeFiyati.BirimFiyat,
             IndirimOrani = request.IndirimOrani,
             IndirimTutari = request.IndirimTutari ?? 0,
             Aciklama = NormalizeOptional(request.Aciklama),
@@ -229,6 +231,10 @@ public sealed class SiparisServisi : ISiparisServisi
                 VaryantKodu = x.StokKartVaryant != null ? x.StokKartVaryant.VaryantKodu : null,
                 Miktar = x.Miktar,
                 BirimFiyat = x.BirimFiyat,
+                FiyatTipiId = x.FiyatTipiId, FiyatTipiAdi = x.FiyatTipiAdi,
+                StokKartSatisBirimiId = x.StokKartSatisBirimiId, BirimKodu = x.BirimKodu,
+                BirimAdi = x.BirimAdi, BirimKatsayi = x.BirimKatsayi,
+                FiyatParaBirimKodu = x.FiyatParaBirimKodu, FiyatKur = x.FiyatKur,
                 SatirAraToplam = x.SatirAraToplam,
                 IndirimOrani = x.IndirimOrani,
                 IndirimTutari = x.IndirimTutari,
