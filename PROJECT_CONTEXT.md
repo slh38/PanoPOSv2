@@ -2668,3 +2668,80 @@ Solution build başarılı: 0 hata, mevcut 1 Desktop WindowsBase uyarısı.
 Desktop, appsettings.json ve CODEX_RULES.md kullanıcı değişiklikleri
 korundu. Yeni client zorunlu IslemAnahtari sözleşmesine ayrıca uyarlanacak;
 Desktop bu görevin dışındadır. Commit/push yapılmadı.
+
+---
+
+# 92. FATURA / FİŞ OKUMA MODELİ (18 EYLÜL 2026)
+
+GET /api/v1/fatura/{id} mevcut FaturaDto sözleşmesi korunarak genişletildi.
+Yeni duplicate fiş endpointi yoktur. Tek cevap satış sonucunu, detay
+snapshotlarını, ödeme dağılımını ve ödeme tipi toplamlarını sağlar.
+Printer, ESC/POS, PDF, HTML fiş, DevExpress report veya Desktop değişikliği
+yapılmadı; yazdırma ileride client/print katmanının sorumluluğudur.
+
+Header mevcut Id, FaturaNo, SiparisId, CariId, DepoId, para birimi/kur,
+iskonto, matrah/KDV, net/ödenen/kalan ve Durum alanlarını korur.
+FaturaTarihi mevcut OlusturmaTarihi değeridir; ayrı mali belge tarihi
+uydurulmaz. TenantId/TenantAdi, SubeId/SubeAdi, CariKodu/CariAdi,
+KasiyerId/KasiyerAdi, CihazId/CihazAdi ve DepoAdi eklendi.
+KasiyerId faturanın OlusturanKullaniciId audit referansından alınır.
+Yeni nullable Fatura.CihazId yalnız faturayı oluşturan doğrulanmış
+IIslemBaglami.CihazId değerinden yazılır; okuyan terminalin cihazı değildir.
+Bağlamsız eski kayıtlara cihaz/kasiyer tahmini veya backfill yapılmaz.
+
+FaturaDetay.StokKartAd ve VaryantKodu yeni nullable snapshotlardır.
+Fatura oluşturulurken aynı tenanttaki masterdan alınır; sonradan ürün
+adı/varyant kodu değişse veya master soft delete edilse detay kaybolmaz.
+Siparişte zaten bulunan BirimKodu/BirimAdi/BirimKatsayi, fiyat tipi,
+fiyat/döviz/kur, KDV, iskonto ve tutar snapshotları aynen korunur;
+güncel master fiyatla yeniden hesaplama yapılmaz. BirimMaliyet ve
+MaliyetYontemi de kayıtlı satış snapshotından döner.
+Silinmiş master ilişkisinin sipariş satırını sessizce elemesine izin
+verilmez; mevcut satış doğrulaması hatayı tüm transaction ile geri alır.
+
+Eski faturaların eksik ürün adı snapshotı boş StokKartAd, eksik varyant
+kodu null döner; bugünkü master adı geçmişe aitmiş gibi sunulmaz.
+Modelde bağımsız VaryantAdi yoktur; mevcut VaryantKodu kullanılır.
+Mevcut API adları Id, StokKartAd, BirimKatsayi ve Durum korunmuştur.
+
+Odemeler, aynı fatura/tenant/şubedeki aktif ve silinmemiş tahsilatları
+tarih/Id sırasıyla döner. Her öğede TahsilatId, Tarih, OdemeTipi, Tutar,
+ParaBirimKodu, nullable KasaId/KasaAdi, BankaId/BankaAdi, CariId ve
+Aciklama bulunur. Kasa/banka/cari bağlantıları mevcut finansal hareketlerden
+çözülür; ödeme listesini çoğaltacak join veya satır başına API/SQL çağrısı yoktur.
+IslemAnahtari ve IstekOzeti bu fiş response'una eklenmedi.
+NakitToplam/KartToplam/VeresiyeToplam, OdemeTipi enum'u ile dağılımdan
+hesaplanır. FiyatTipi ile ödeme tipi birbirinden bağımsızdır.
+Görev 4 tahsilat yazma, idempotency ve liste endpointi davranışları korunur.
+
+Tenant/şube erişimi mevcut IIslemBaglami + SubeKapsami ile doğrulanır.
+İsim sorgularında da açık tenant ve gerekli şube sınırı vardır.
+Firma/şube/cari/kasiyer/cihaz/depo/kasa/banka adları mevcut referanslardan
+okunan gösterim bilgileridir; bunlar yeni bir kurumsal tarihçe snapshotı
+değildir. Aynı kapsamda soft-delete edilmiş masterların adları okunabilir.
+Tahsilat ve finansal hareketlerin soft-delete filtresi açıkça uygulanır.
+
+Okuma EF Core ile sınırlı, sabit sayıda sorgu kullanır. SQLite testinde
+1 ve 12 satır/ödeme için 6 sorgu ölçüldü; SQL Server ayrıca mevcut fatura
+UPDLOCK/HOLDLOCK komutunu kullanır. Kısa read transaction header ve ödeme
+dağılımını aynı ödeme durumunda tutar; dış transaction varsa ona katılır.
+Okuma fatura/tahsilat/stok kayıtlarını değiştirmez. SELECT * ve N+1 yoktur.
+
+Migration: 20260918093744_AddInvoiceReceiptSnapshots.
+Yalnız FaturaDetay.StokKartAd/VaryantKodu ve Fatura.CihazId FK/index eklendi.
+PanoPosDb database update başarılı; eski migrationlar/veriler değiştirilmedi,
+bekleyen model değişikliği yok. Mevcut TLS 1.0 uyarısı sunucu kapsamındadır.
+
+Mevcut 506 test korundu; 23 yeni SQLite/HTTP testiyle 529/529 başarılı,
+0 atlanan. Mevcut 3 SQL Server concurrency testine yeni fatura ödeme
+read modelinin gerçek SQL Server doğrulaması da eklendi ve çalıştırıldı.
+Swagger header/ödeme şeması, snapshot değişmezliği, tenant/şube izolasyonu,
+gerçek kasiyer/cihaz, parçalı/veresiye ödeme ve sorgu sayısı doğrulandı.
+Solution build 0 hata, mevcut 1 Desktop WindowsBase uyarısıyla başarılı.
+Desktop, appsettings.json ve CODEX_RULES.md dosyaları hash kontrolüyle
+korundu. Stage/commit/push yapılmadı.
+
+Fiş için kurumsal TODO: mevcut Tenant/Sube modellerinde Ad/Kod dışında
+Adres, Telefon, VergiDairesi, VergiNo veya ayrı ticari unvan alanı yoktur.
+Bu alanlar bu görevde eklenmedi; mevcut Tenant.Ad firma gösterim adıdır.
+Yazdırma/fiş tasarımı ve kurumsal bilgilerin tarihçesi ayrı görevlerdir.

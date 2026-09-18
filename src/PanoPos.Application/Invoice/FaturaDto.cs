@@ -4,6 +4,22 @@ namespace PanoPos.Application.Invoice;
 
 public sealed class FaturaDto
 {
+    public DateTime FaturaTarihi { get; set; }
+    public Guid TenantId { get; set; }
+    public string? TenantAdi { get; set; }
+    public long SubeId { get; set; }
+    public string? SubeAdi { get; set; }
+    public string? CariKodu { get; set; }
+    public string? CariAdi { get; set; }
+    public long? KasiyerId { get; set; }
+    public string? KasiyerAdi { get; set; }
+    public long? CihazId { get; set; }
+    public string? CihazAdi { get; set; }
+    public string? DepoAdi { get; set; }
+    public decimal NakitToplam { get; set; }
+    public decimal KartToplam { get; set; }
+    public decimal VeresiyeToplam { get; set; }
+    public List<FaturaOdemeDto> Odemeler { get; set; } = new();
     public decimal ToplamMatrah { get; set; }
     public decimal ToplamKdv { get; set; }
     public long Id { get; set; }

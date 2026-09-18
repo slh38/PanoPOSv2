@@ -100,6 +100,12 @@ public sealed class SqlServerPaymentConcurrencyTests
             }
             var invoices = await setup.Faturalar.AsNoTracking().Where(x => x.Id == firstId || x.Id == secondId).ToListAsync();
             Assert.Equal(100, invoices.Sum(x => x.OdenenTutar));
+            var receipt = await new PanoPos.Infrastructure.Invoice.FaturaServisi(setup).FaturaGetirAsync(payment.FaturaId);
+            Assert.Equal(payment.Id, Assert.Single(receipt.Odemeler).TahsilatId);
+            Assert.Equal(kasa.Id, receipt.Odemeler[0].KasaId);
+            Assert.Equal(kasa.Ad, receipt.Odemeler[0].KasaAdi);
+            Assert.Equal(100, receipt.NakitToplam);
+            Assert.Equal(receipt.Odemeler.Sum(x => x.Tutar), receipt.OdenenTutar);
             Assert.All(invoices, x => Assert.Equal(x.NetToplam - x.OdenenTutar, x.KalanTutar));
         }
         finally

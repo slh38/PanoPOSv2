@@ -5,6 +5,7 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class Fatura : BaseEntity
 {
+    public long? CihazId { get; set; }
     public long DepoId { get; set; }
     public bool KdvDahilMi { get; set; } = true;
     public decimal ToplamMatrah { get; set; }

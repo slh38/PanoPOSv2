@@ -45,9 +45,13 @@ public sealed partial class FaturaServisi : IFaturaServisi
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         await LockOrderAsync(request.SiparisId, cancellationToken);
-        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).AsNoTracking()
-            .Include(x => x.Detaylar.Where(y => y.AktifMi))
-            .SingleOrDefaultAsync(x => x.Id == request.SiparisId, cancellationToken)
+        // Keep invalid masters visible for validation; a deleted product must not silently remove an order line.
+        var siparis = await _dbContext.Siparisler.SubeKapsami(_dbContext).IgnoreQueryFilters().AsNoTracking()
+            .Include(x => x.Detaylar.Where(y => y.AktifMi && !y.SilindiMi))
+                .ThenInclude(x => x.StokKart)
+            .Include(x => x.Detaylar.Where(y => y.AktifMi && !y.SilindiMi))
+                .ThenInclude(x => x.StokKartVaryant)
+            .SingleOrDefaultAsync(x => x.Id == request.SiparisId && !x.SilindiMi, cancellationToken)
             ?? throw new UygulamaHatasi(404, "Siparis bulunamadi", "Siparis bulunamadi.", "siparis_not_found");
 
         if (siparis.Durum != SiparisDurumu.Bekliyor)
@@ -75,6 +79,7 @@ public sealed partial class FaturaServisi : IFaturaServisi
             TenantId = siparis.TenantId,
             SubeId = siparis.SubeId,
             DepoId = depoId,
+            CihazId = _dbContext.Baglam()?.CihazId,
             FaturaNo = await FaturaNoUretAsync(siparis.TenantId, cancellationToken),
             SiparisId = siparis.Id,
             CariId = siparis.CariId,
@@ -105,6 +110,9 @@ public sealed partial class FaturaServisi : IFaturaServisi
                 SubeId = detay.SubeId,
                 FaturaId = fatura.Id,
                 StokKartId = detay.StokKartId,
+                StokKartAd = detay.StokKart.TenantId == siparis.TenantId ? detay.StokKart.Ad
+                    : throw new UygulamaHatasi(409, "Gecersiz stok", "Stok karti kapsam disinda.", "stock_scope_mismatch"),
+                VaryantKodu = detay.StokKartVaryant?.TenantId == siparis.TenantId ? detay.StokKartVaryant.VaryantKodu : null,
                 KdvId = detay.KdvId, KdvOrani = detay.KdvOrani, KdvDahilMi = detay.KdvDahilMi,
                 Matrah = detay.Matrah, KdvTutari = detay.KdvTutari, GenelIndirimPayi = detay.GenelIndirimPayi,
                 StokKartSatisBirimiId = detay.StokKartSatisBirimiId, BirimKodu = detay.BirimKodu, BirimAdi = detay.BirimAdi, BirimKatsayi = detay.BirimKatsayi,
@@ -163,15 +171,39 @@ public sealed partial class FaturaServisi : IFaturaServisi
 
     public async Task<FaturaDto> FaturaGetirAsync(long id, CancellationToken cancellationToken = default)
     {
-        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext)
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKart)
-            .Include(x => x.Detaylar.Where(y => y.AktifMi)).ThenInclude(x => x.StokKartVaryant)
-            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
-
-        return new FaturaDto
+        // Reuse an outer write transaction; otherwise hold the invoice lock until the read is complete.
+        await using var transaction = _dbContext.Database.CurrentTransaction == null
+            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        var fatura = await FaturaOdemeButunlugu.KilitleAsync(_dbContext, id, cancellationToken);
+        var names = await _dbContext.Faturalar.AsNoTracking()
+            .Where(x => x.Id == id && x.TenantId == fatura.TenantId && x.SubeId == fatura.SubeId)
+            .Select(x => new
+            {
+                TenantAdi = _dbContext.Set<Tenant>().IgnoreQueryFilters().Where(t => t.TenantId == x.TenantId).Select(t => t.Ad).FirstOrDefault(),
+                SubeAdi = _dbContext.Subeler.IgnoreQueryFilters().Where(s => s.Id == x.SubeId && s.TenantId == x.TenantId).Select(s => s.Ad).FirstOrDefault(),
+                CariKodu = _dbContext.CariKartlar.IgnoreQueryFilters().Where(c => c.Id == x.CariId && c.TenantId == x.TenantId && c.SubeId == x.SubeId).Select(c => c.CariKodu).FirstOrDefault(),
+                CariAdi = _dbContext.CariKartlar.IgnoreQueryFilters().Where(c => c.Id == x.CariId && c.TenantId == x.TenantId && c.SubeId == x.SubeId).Select(c => c.Ad).FirstOrDefault(),
+                KasiyerAdi = _dbContext.Kullanicilar.IgnoreQueryFilters().Where(k => k.Id == x.OlusturanKullaniciId && k.TenantId == x.TenantId).Select(k => k.Ad + " " + k.Soyad).FirstOrDefault(),
+                CihazAdi = _dbContext.Cihazlar.IgnoreQueryFilters().Where(c => c.Id == x.CihazId && c.TenantId == x.TenantId && c.SubeId == x.SubeId).Select(c => c.Ad).FirstOrDefault(),
+                DepoAdi = _dbContext.Depolar.IgnoreQueryFilters().Where(d => d.Id == x.DepoId && d.TenantId == x.TenantId && d.SubeId == x.SubeId).Select(d => d.Ad).FirstOrDefault()
+            }).SingleAsync(cancellationToken);
+        var details = await _dbContext.FaturaDetaylari.AsNoTracking()
+            .Where(x => x.FaturaId == id && x.TenantId == fatura.TenantId && x.SubeId == fatura.SubeId && x.AktifMi)
+            .OrderBy(x => x.Id).ToListAsync(cancellationToken);
+        var payments = await FaturaOdemeleriAsync(fatura, cancellationToken);
+        var result = new FaturaDto
         {
             Id = fatura.Id,
+            FaturaTarihi = fatura.OlusturmaTarihi,
+            TenantId = fatura.TenantId, TenantAdi = names.TenantAdi,
+            SubeId = fatura.SubeId, SubeAdi = names.SubeAdi,
+            CariKodu = names.CariKodu, CariAdi = names.CariAdi,
+            KasiyerId = fatura.OlusturanKullaniciId, KasiyerAdi = names.KasiyerAdi,
+            CihazId = fatura.CihazId, CihazAdi = names.CihazAdi, DepoAdi = names.DepoAdi,
+            Odemeler = payments,
+            NakitToplam = payments.Where(p => p.OdemeTipi == OdemeTipi.Nakit).Sum(p => p.Tutar),
+            KartToplam = payments.Where(p => p.OdemeTipi == OdemeTipi.KrediKarti).Sum(p => p.Tutar),
+            VeresiyeToplam = payments.Where(p => p.OdemeTipi == OdemeTipi.Veresiye).Sum(p => p.Tutar),
             DepoId = fatura.DepoId,
             FaturaNo = fatura.FaturaNo,
             SiparisId = fatura.SiparisId,
@@ -191,16 +223,16 @@ public sealed partial class FaturaServisi : IFaturaServisi
             KapanisTarihi = fatura.KapanisTarihi,
             KapatanKullaniciId = fatura.KapatanKullaniciId,
             AktifMi = fatura.AktifMi,
-            Detaylar = fatura.Detaylar.OrderBy(x => x.Id).Select(x => new FaturaDetayDto
+            Detaylar = details.Select(x => new FaturaDetayDto
             {
                 BirimMaliyet = x.BirimMaliyet, MaliyetYontemi = x.MaliyetYontemi,
                 Id = x.Id,
                 KdvId = x.KdvId, KdvOrani = x.KdvOrani, KdvDahilMi = x.KdvDahilMi,
                 Matrah = x.Matrah, KdvTutari = x.KdvTutari, GenelIndirimPayi = x.GenelIndirimPayi,
                 StokKartId = x.StokKartId,
-                StokKartAd = x.StokKart.Ad,
+                StokKartAd = x.StokKartAd ?? string.Empty,
                 StokKartVaryantId = x.StokKartVaryantId,
-                VaryantKodu = x.StokKartVaryant != null ? x.StokKartVaryant.VaryantKodu : null,
+                VaryantKodu = x.VaryantKodu,
                 Miktar = x.Miktar,
                 BirimFiyat = x.BirimFiyat,
                 FiyatTipiId = x.FiyatTipiId, FiyatTipiAdi = x.FiyatTipiAdi,
@@ -215,6 +247,8 @@ public sealed partial class FaturaServisi : IFaturaServisi
                 Aciklama = x.Aciklama
             }).ToList()
         };
+        if (transaction != null) await transaction.CommitAsync(cancellationToken);
+        return result;
     }
 
     public async Task<SayfaliSonucDto<FaturaListeItemDto>> FaturaListeleAsync(long subeId, int? durum, int page, int pageSize, CancellationToken cancellationToken = default)
