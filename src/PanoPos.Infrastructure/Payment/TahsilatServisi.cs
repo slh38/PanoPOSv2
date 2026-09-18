@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using Microsoft.Data.SqlClient;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using PanoPos.Application.Common;
@@ -36,120 +38,146 @@ public sealed class TahsilatServisi : ITahsilatServisi
             request.CihazId = IslemKapsami.Kimlik(request.CihazId, context.CihazId);
         }
         ValidateRequest(request);
-
-        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == request.FaturaId, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
-
-        if (fatura.SubeId != request.SubeId)
-        {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Fatura ile sube bilgisi uyusmuyor.", "payment_branch_mismatch");
-        }
-
-        if (fatura.Durum == FaturaDurumu.Iptal || fatura.Durum == FaturaDurumu.Iade)
-        {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Iptal veya iade faturadan tahsilat alinamaz.", "invoice_not_collectible");
-        }
-
-        if (fatura.Durum != FaturaDurumu.Acik)
-        {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Sadece acik faturadan tahsilat alinabilir.", "invoice_not_open");
-        }
-
-        FaturaUyumlulukKontrolu(fatura, request);
-
-        var mevcutToplamTahsilat = await FaturaTahsilatToplaminiHesaplaAsync(request.FaturaId, cancellationToken);
-        var yeniToplamTahsilat = mevcutToplamTahsilat + request.Tutar;
-        if (yeniToplamTahsilat > fatura.NetToplam)
-        {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
-        }
-
-        var kullaniciVar = await _dbContext.Kullanicilar.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.KullaniciId, cancellationToken);
-        if (!kullaniciVar)
-        {
-            throw new UygulamaHatasi(404, "Kullanici bulunamadi", "Kullanici bulunamadi.", "kullanici_not_found");
-        }
-
-        var cihazVar = await _dbContext.Cihazlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId, cancellationToken);
-        if (!cihazVar)
-        {
-            throw new UygulamaHatasi(404, "Cihaz bulunamadi", "Cihaz bulunamadi.", "cihaz_not_found");
-        }
-
-        var tahsilatTarihi = request.TahsilatTarihi ?? DateTime.UtcNow;
-        var yerelTutar = HesaplaYerelTutar(request.Tutar, request.Kur);
-
+        request.ParaBirimKodu = request.ParaBirimKodu.Trim().ToUpperInvariant();
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-        var tahsilat = new Tahsilat
+        Guid? tenantId = null;
+        try
         {
-            TenantId = fatura.TenantId,
-            SubeId = fatura.SubeId,
-            FaturaId = fatura.Id,
-            TahsilatFisNo = await TahsilatFisNoUretAsync(fatura.TenantId, cancellationToken),
-            OdemeTipi = request.OdemeTipi,
-            ParaBirimKodu = request.ParaBirimKodu.Trim(),
-            Kur = request.Kur,
-            Tutar = request.Tutar,
-            YerelTutar = yerelTutar,
-            Aciklama = NormalizeOptional(request.Aciklama),
-            TahsilatTarihi = tahsilatTarihi,
-            AktifMi = true,
-            SilindiMi = false,
-            OlusturanKullaniciId = request.KullaniciId,
-            GuncelleyenKullaniciId = request.KullaniciId
-        };
+            var fatura = await FaturaOdemeButunlugu.KilitleAsync(_dbContext, request.FaturaId, cancellationToken);
+            tenantId = fatura.TenantId;
 
-        _dbContext.Tahsilatlar.Add(tahsilat);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        switch (request.OdemeTipi)
-        {
-            case OdemeTipi.Nakit:
-                await NakitHareketiOlusturAsync(request, tahsilat, cancellationToken);
-                break;
-            case OdemeTipi.KrediKarti:
-                await BankaHareketiOlusturAsync(request, tahsilat, cancellationToken);
-                break;
-            case OdemeTipi.Veresiye:
-                await CariHareketiOlusturAsync(fatura, request, tahsilat, cancellationToken);
-                break;
-            default:
-                throw new UygulamaHatasi(400, "Gecersiz istek", "Desteklenmeyen odeme tipi.", "payment_type_invalid");
-        }
-
-        var toplamTahsilat = await FaturaTahsilatToplaminiHesaplaAsync(fatura.Id, cancellationToken);
-        FaturaDurumunuGuncelle(fatura, toplamTahsilat, tahsilatTarihi, request.KullaniciId);
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _outboxServisi.OlayEkleAsync(new OutboxOlayEkleRequestDto
-        {
-            TenantId = tahsilat.TenantId,
-            SubeId = tahsilat.SubeId,
-            CihazId = request.CihazId,
-            OlayTipi = "TahsilatOlusturuldu",
-            KaynakTablo = nameof(Tahsilat),
-            KaynakId = tahsilat.Id,
-            PayloadJson = JsonSerializer.Serialize(new
+            if (fatura.SubeId != request.SubeId)
             {
-                tahsilat.Id,
-                tahsilat.FaturaId,
-                tahsilat.TahsilatFisNo,
-                tahsilat.OdemeTipi,
-                tahsilat.ParaBirimKodu,
-                tahsilat.Kur,
-                tahsilat.Tutar,
-                tahsilat.YerelTutar,
-                fatura.OdenenTutar,
-                fatura.KalanTutar,
-                fatura.Durum
-            })
-        }, cancellationToken);
+                throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Fatura ile sube bilgisi uyusmuyor.", "payment_branch_mismatch");
+            }
 
-        await transaction.CommitAsync(cancellationToken);
+            var tekrar = await TekrarGetirAsync(request, fatura.TenantId, cancellationToken);
+            if (tekrar != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return tekrar;
+            }
 
-        return await TahsilatGetirAsync(tahsilat.Id, cancellationToken);
+            if (fatura.Durum == FaturaDurumu.Iptal || fatura.Durum == FaturaDurumu.Iade)
+            {
+                throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Iptal veya iade faturadan tahsilat alinamaz.", "invoice_not_collectible");
+            }
+
+            if (fatura.Durum != FaturaDurumu.Acik)
+            {
+                throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Sadece acik faturadan tahsilat alinabilir.", "invoice_not_open");
+            }
+
+            FaturaUyumlulukKontrolu(fatura, request);
+
+            var mevcutToplamTahsilat = await FaturaOdemeButunlugu.ToplamAsync(_dbContext, fatura, cancellationToken);
+            var yeniToplamTahsilat = mevcutToplamTahsilat + request.Tutar;
+            if (yeniToplamTahsilat > fatura.NetToplam)
+            {
+                throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
+            }
+
+            var kullaniciVar = await _dbContext.Kullanicilar.TenantKapsami(_dbContext).AnyAsync(x => x.Id == request.KullaniciId && x.TenantId == fatura.TenantId && x.AktifMi, cancellationToken);
+            if (!kullaniciVar)
+            {
+                throw new UygulamaHatasi(404, "Kullanici bulunamadi", "Kullanici bulunamadi.", "kullanici_not_found");
+            }
+
+            var cihazVar = await _dbContext.Cihazlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.CihazId && x.SubeId == request.SubeId && x.TenantId == fatura.TenantId && x.AktifMi, cancellationToken);
+            if (!cihazVar)
+            {
+                throw new UygulamaHatasi(404, "Cihaz bulunamadi", "Cihaz bulunamadi.", "cihaz_not_found");
+            }
+
+            var tahsilatTarihi = request.TahsilatTarihi ?? DateTime.UtcNow;
+            var yerelTutar = HesaplaYerelTutar(request.Tutar, request.Kur);
+
+            var tahsilat = new Tahsilat
+            {
+                IslemAnahtari = request.IslemAnahtari,
+                IstekOzeti = IstekOzeti(request),
+                TenantId = fatura.TenantId,
+                SubeId = fatura.SubeId,
+                FaturaId = fatura.Id,
+                TahsilatFisNo = $"TAH-{DateTime.UtcNow:yyyyMMdd}-{request.IslemAnahtari:N}",
+                OdemeTipi = request.OdemeTipi,
+                ParaBirimKodu = request.ParaBirimKodu.Trim(),
+                Kur = request.Kur,
+                Tutar = request.Tutar,
+                YerelTutar = yerelTutar,
+                Aciklama = NormalizeOptional(request.Aciklama),
+                TahsilatTarihi = tahsilatTarihi,
+                AktifMi = true,
+                SilindiMi = false,
+                OlusturanKullaniciId = request.KullaniciId,
+                GuncelleyenKullaniciId = request.KullaniciId
+            };
+
+            _dbContext.Tahsilatlar.Add(tahsilat);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            switch (request.OdemeTipi)
+            {
+                case OdemeTipi.Nakit:
+                    await NakitHareketiOlusturAsync(request, tahsilat, cancellationToken);
+                    break;
+                case OdemeTipi.KrediKarti:
+                    await BankaHareketiOlusturAsync(request, tahsilat, cancellationToken);
+                    break;
+                case OdemeTipi.Veresiye:
+                    await CariHareketiOlusturAsync(fatura, request, tahsilat, cancellationToken);
+                    break;
+                default:
+                    throw new UygulamaHatasi(400, "Gecersiz istek", "Desteklenmeyen odeme tipi.", "payment_type_invalid");
+            }
+
+            var toplamTahsilat = await FaturaOdemeButunlugu.ToplamAsync(_dbContext, fatura, cancellationToken);
+            FaturaOdemeButunlugu.Guncelle(fatura, toplamTahsilat, tahsilatTarihi, request.KullaniciId);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _outboxServisi.OlayEkleAsync(new OutboxOlayEkleRequestDto
+            {
+                TenantId = tahsilat.TenantId,
+                SubeId = tahsilat.SubeId,
+                CihazId = request.CihazId,
+                OlayTipi = "TahsilatOlusturuldu",
+                KaynakTablo = nameof(Tahsilat),
+                KaynakId = tahsilat.Id,
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    tahsilat.Id,
+                    tahsilat.FaturaId,
+                    tahsilat.TahsilatFisNo,
+                    tahsilat.OdemeTipi,
+                    tahsilat.ParaBirimKodu,
+                    tahsilat.Kur,
+                    tahsilat.Tutar,
+                    tahsilat.YerelTutar,
+                    fatura.OdenenTutar,
+                    fatura.KalanTutar,
+                    fatura.Durum
+                })
+            }, cancellationToken);
+
+            var result = await TahsilatGetirAsync(tahsilat.Id, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 } && tenantId.HasValue)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            await transaction.DisposeAsync();
+            _dbContext.ChangeTracker.Clear();
+            return await TekrarGetirAsync(request, tenantId.Value, cancellationToken)
+                ?? throw new UygulamaHatasi(409, "Tahsilat cakismasi", "Islem cakisti. Ayni islem anahtariyla tekrar deneyiniz.", "payment_conflict");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            _dbContext.ChangeTracker.Clear();
+            throw;
+        }
     }
 
     public async Task<TahsilatDto> TahsilatGetirAsync(long id, CancellationToken cancellationToken = default)
@@ -162,6 +190,7 @@ public sealed class TahsilatServisi : ITahsilatServisi
 
         return new TahsilatDto
         {
+            IslemAnahtari = tahsilat.IslemAnahtari,
             Id = tahsilat.Id,
             FaturaId = tahsilat.FaturaId,
             TahsilatFisNo = tahsilat.TahsilatFisNo,
@@ -179,14 +208,14 @@ public sealed class TahsilatServisi : ITahsilatServisi
         };
     }
 
-    public async Task<SayfaliSonucDto<TahsilatListeItemDto>> TahsilatListeleAsync(long subeId, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<SayfaliSonucDto<TahsilatListeItemDto>> TahsilatListeleAsync(long subeId, int page, int pageSize, CancellationToken cancellationToken = default, long? faturaId = null)
     {
         if (subeId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId zorunludur.", "sube_required");
         }
 
-        if (page <= 0 || pageSize <= 0)
+        if (page <= 0 || pageSize is < 1 or > 200 || (long)(page - 1) * pageSize > int.MaxValue || faturaId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "Page ve pageSize 0'dan buyuk olmalidir.", "pagination_invalid");
         }
@@ -207,7 +236,8 @@ public sealed class TahsilatServisi : ITahsilatServisi
 FROM Tahsilat
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
-  AND SilindiMi = 0;";
+  AND SilindiMi = 0 AND AktifMi = 1
+  AND (@FaturaId IS NULL OR FaturaId = @FaturaId);";
 
         var provider = _dbContext.Database.ProviderName ?? string.Empty;
         var listSql = provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
@@ -215,18 +245,20 @@ WHERE TenantId = @TenantId
 FROM Tahsilat
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
-  AND SilindiMi = 0
+  AND SilindiMi = 0 AND AktifMi = 1
+  AND (@FaturaId IS NULL OR FaturaId = @FaturaId)
 ORDER BY Id DESC
 LIMIT @Take OFFSET @Skip;"
             : @"SELECT Id, TahsilatFisNo, FaturaId, OdemeTipi, ParaBirimKodu, Kur, Tutar, YerelTutar, TahsilatTarihi
 FROM Tahsilat
 WHERE TenantId = @TenantId
   AND SubeId = @SubeId
-  AND SilindiMi = 0
+  AND SilindiMi = 0 AND AktifMi = 1
+  AND (@FaturaId IS NULL OR FaturaId = @FaturaId)
 ORDER BY Id DESC
 OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
-        var parameters = new { TenantId = tenantId, SubeId = subeId, Skip = (page - 1) * pageSize, Take = pageSize };
+        var parameters = new { TenantId = tenantId, SubeId = subeId, FaturaId = faturaId, Skip = (page - 1) * pageSize, Take = pageSize };
         var toplamKayit = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: cancellationToken));
         var kayitlar = (await connection.QueryAsync<TahsilatListeItemDto>(new CommandDefinition(listSql, parameters, cancellationToken: cancellationToken))).ToList();
 
@@ -246,7 +278,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "Nakit tahsilatta KasaId zorunludur.", "cash_register_required");
         }
 
-        var kasaVar = await _dbContext.Kasalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.KasaId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var kasaVar = await _dbContext.Kasalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.KasaId.Value && x.SubeId == request.SubeId && x.TenantId == tahsilat.TenantId && x.AktifMi, cancellationToken);
         if (!kasaVar)
         {
             throw new UygulamaHatasi(404, "Kasa bulunamadi", "Kasa bulunamadi.", "kasa_not_found");
@@ -280,7 +312,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "Kredi karti tahsilatta BankaId zorunludur.", "bank_required");
         }
 
-        var bankaVar = await _dbContext.Bankalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.BankaId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var bankaVar = await _dbContext.Bankalar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == request.BankaId.Value && x.SubeId == request.SubeId && x.TenantId == tahsilat.TenantId && x.AktifMi, cancellationToken);
         if (!bankaVar)
         {
             throw new UygulamaHatasi(404, "Banka bulunamadi", "Banka bulunamadi.", "bank_not_found");
@@ -313,7 +345,7 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Veresiye tahsilatta faturada CariId zorunludur.", "invoice_customer_required");
         }
 
-        var cariVar = await _dbContext.CariKartlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId, cancellationToken);
+        var cariVar = await _dbContext.CariKartlar.SubeKapsami(_dbContext).AnyAsync(x => x.Id == fatura.CariId.Value && x.SubeId == request.SubeId && x.TenantId == tahsilat.TenantId && x.AktifMi, cancellationToken);
         if (!cariVar)
         {
             throw new UygulamaHatasi(404, "Cari bulunamadi", "Cari bulunamadi.", "cari_kart_not_found");
@@ -342,22 +374,24 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
 
     private static void ValidateRequest(TahsilatOlusturRequestDto request)
     {
+        if (request.IslemAnahtari == Guid.Empty)
+            throw new UygulamaHatasi(400, "Gecersiz istek", "IslemAnahtari zorunludur.", "payment_key_required");
         if (request.SubeId <= 0 || request.FaturaId <= 0 || request.KullaniciId <= 0 || request.CihazId <= 0)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "SubeId, FaturaId, KullaniciId ve CihazId zorunludur.", "payment_required_fields");
         }
 
-        if (string.IsNullOrWhiteSpace(request.ParaBirimKodu))
+        if (string.IsNullOrWhiteSpace(request.ParaBirimKodu) || request.ParaBirimKodu.Trim().Length > 10)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "ParaBirimKodu zorunludur.", "payment_currency_required");
         }
 
-        if (request.Tutar <= 0)
+        if (request.Tutar <= 0 || request.Tutar > 9999999999999999.99m || decimal.Round(request.Tutar, 2) != request.Tutar)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "Tahsilat tutari 0'dan buyuk olmalidir.", "payment_amount_invalid");
         }
 
-        if (request.Kur <= 0)
+        if (request.Kur <= 0 || request.Kur > 999999999999.999999m || decimal.Round(request.Kur, 6) != request.Kur)
         {
             throw new UygulamaHatasi(400, "Gecersiz istek", "Kur 0'dan buyuk olmalidir.", "payment_rate_invalid");
         }
@@ -376,62 +410,41 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
         }
     }
 
-    private async Task<decimal> FaturaTahsilatToplaminiHesaplaAsync(long faturaId, CancellationToken cancellationToken)
+    private async Task<TahsilatDto?> TekrarGetirAsync(TahsilatOlusturRequestDto request, Guid tenant, CancellationToken ct)
     {
-        var tahsilatlar = await _dbContext.Tahsilatlar.SubeKapsami(_dbContext)
-            .Where(x => x.FaturaId == faturaId && x.AktifMi)
-            .Select(x => x.Tutar)
-            .ToListAsync(cancellationToken);
-
-        return tahsilatlar.Sum();
+        var existing = await _dbContext.Tahsilatlar.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TenantId == tenant && x.IslemAnahtari == request.IslemAnahtari, ct);
+        if (existing == null) return null;
+        if (existing.SubeId != request.SubeId || existing.SilindiMi || !existing.AktifMi || existing.IstekOzeti != IstekOzeti(request))
+            throw new UygulamaHatasi(409, "Islem anahtari kullanilmis", "Ayni anahtar farkli veya gecersiz bir odemeye ait.", "payment_key_conflict");
+        return await TahsilatGetirAsync(existing.Id, ct);
     }
 
-    private static void FaturaDurumunuGuncelle(Fatura fatura, decimal toplamTahsilat, DateTime kapanisTarihi, long kullaniciId)
-    {
-        toplamTahsilat = Math.Round(toplamTahsilat, 2, MidpointRounding.AwayFromZero);
-        var kalanTutar = Math.Round(fatura.NetToplam - toplamTahsilat, 2, MidpointRounding.AwayFromZero);
-        if (kalanTutar < 0)
+    private static string IstekOzeti(TahsilatOlusturRequestDto request)
+        => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            throw new UygulamaHatasi(409, "Tahsilat olusturulamadi", "Tahsilat toplami fatura net toplamini gecemez.", "payment_total_exceeds_invoice");
-        }
-
-        fatura.OdenenTutar = toplamTahsilat;
-        fatura.KalanTutar = kalanTutar;
-
-        if (kalanTutar == 0)
-        {
-            fatura.Durum = FaturaDurumu.Kapali;
-            fatura.KapanisTarihi = kapanisTarihi;
-            fatura.KapatanKullaniciId = kullaniciId;
-            fatura.AktifMi = false;
-            return;
-        }
-
-        fatura.Durum = FaturaDurumu.Acik;
-        fatura.KapanisTarihi = null;
-        fatura.KapatanKullaniciId = null;
-        fatura.AktifMi = true;
-    }
-
-    private async Task<string> TahsilatFisNoUretAsync(Guid tenantId, CancellationToken cancellationToken)
-    {
-        var bugun = DateTime.UtcNow.ToString("yyyyMMdd");
-        var oncekiler = await _dbContext.Tahsilatlar.TenantKapsami(_dbContext)
-            .Where(x => x.TenantId == tenantId && x.TahsilatFisNo.StartsWith($"TAH-{bugun}-"))
-            .Select(x => x.TahsilatFisNo)
-            .ToListAsync(cancellationToken);
-
-        var sonraki = oncekiler
-            .Select(x => x.Split('-').LastOrDefault())
-            .Select(x => int.TryParse(x, out var sayi) ? sayi : 0)
-            .DefaultIfEmpty(0)
-            .Max() + 1;
-
-        return $"TAH-{bugun}-{sonraki:000000}";
-    }
+            request.SubeId,
+            request.FaturaId,
+            request.OdemeTipi,
+            Tutar = request.Tutar.ToString("G29", System.Globalization.CultureInfo.InvariantCulture),
+            request.ParaBirimKodu,
+            Kur = request.Kur.ToString("G29", System.Globalization.CultureInfo.InvariantCulture),
+            request.KasaId,
+            request.BankaId,
+            Aciklama = NormalizeOptional(request.Aciklama),
+            Tarih = request.TahsilatTarihi?.ToUniversalTime()
+        })));
 
     private static decimal HesaplaYerelTutar(decimal tutar, decimal kur)
-        => Math.Round(tutar * kur, 2, MidpointRounding.AwayFromZero);
+    {
+        try
+        {
+            var result = Math.Round(tutar * kur, 2, MidpointRounding.AwayFromZero);
+            if (result <= 9999999999999999.99m) return result;
+        }
+        catch (OverflowException) { }
+        throw new UygulamaHatasi(400, "Gecersiz tutar", "Yerel tutar desteklenen siniri asiyor.", "payment_amount_invalid");
+    }
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

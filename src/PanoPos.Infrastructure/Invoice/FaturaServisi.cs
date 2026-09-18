@@ -8,6 +8,7 @@ using PanoPos.Domain.Entities;
 using PanoPos.Domain.Enums;
 using PanoPos.Infrastructure.Outbox;
 using PanoPos.Infrastructure.Persistence;
+using PanoPos.Infrastructure.Payment;
 
 namespace PanoPos.Infrastructure.Invoice;
 
@@ -288,23 +289,22 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;";
             throw new UygulamaHatasi(400, "Gecersiz istek", "KapatanKullaniciId zorunludur.", "closing_user_required");
         }
 
-        var fatura = await _dbContext.Faturalar.SubeKapsami(_dbContext).SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
-            ?? throw new UygulamaHatasi(404, "Fatura bulunamadi", "Fatura bulunamadi.", "invoice_not_found");
-
-        if (fatura.Durum != FaturaDurumu.Acik)
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var fatura = await FaturaOdemeButunlugu.KilitleAsync(_dbContext, id, cancellationToken);
+        if (fatura.Durum is FaturaDurumu.Iptal or FaturaDurumu.Iade)
         {
             throw new UygulamaHatasi(409, "Fatura kapatilamadi", "Sadece acik fatura kapatilabilir.", "invoice_not_open");
         }
 
-        fatura.Durum = FaturaDurumu.Kapali;
-        fatura.KalanTutar = 0m;
-        fatura.OdenenTutar = fatura.NetToplam;
-        fatura.KapanisTarihi = DateTime.UtcNow;
-        fatura.KapatanKullaniciId = request.KapatanKullaniciId;
-        fatura.AktifMi = false;
+        var toplam = await FaturaOdemeButunlugu.ToplamAsync(_dbContext, fatura, cancellationToken);
+        if (toplam < fatura.NetToplam)
+            throw new UygulamaHatasi(409, "Fatura kapatilamadi", "Fatura icin yeterli gercek tahsilat bulunmuyor.", "invoice_not_fully_paid");
+        FaturaOdemeButunlugu.Guncelle(fatura, toplam, DateTime.UtcNow, request.KapatanKullaniciId);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return await FaturaGetirAsync(id, cancellationToken);
+        var result = await FaturaGetirAsync(id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return result;
     }
 
     public async Task<FaturaDto> FaturaIptalAsync(long id, FaturaIptalRequestDto? request = null, CancellationToken cancellationToken = default)

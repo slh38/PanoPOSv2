@@ -5,6 +5,8 @@ namespace PanoPos.Domain.Entities;
 
 public sealed class Tahsilat : BaseEntity
 {
+    public Guid? IslemAnahtari { get; set; }
+    public string? IstekOzeti { get; set; }
     public long FaturaId { get; set; }
     public string TahsilatFisNo { get; set; } = string.Empty;
     public OdemeTipi OdemeTipi { get; set; }

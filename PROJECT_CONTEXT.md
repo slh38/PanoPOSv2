@@ -2595,3 +2595,76 @@ başarılıdır. SQL Server üzerinde çok terminalli yük testi yapılmamışt�
 Desktop, appsettings.json ve CODEX_RULES.md korunmuştur. Commit/push yoktur.
 Ödeme idempotency, FaturaKapat, fiş response, vardiya, Desktop ve diğer
 önceki kapsam dışı işler bu görevde uygulanmamıştır.
+
+---
+
+# 91. TAHSİLAT VE FATURA ÖDEME BÜTÜNLÜĞÜ
+
+Görev 4 ile Fatura ödeme durumu gerçek, aktif ve silinmemiş Tahsilat
+toplamından hesaplanır. OdenenTutar bu toplamdır; KalanTutar =
+NetToplam - OdenenTutar. Fazla ödeme reddedilir, sıfır kalan faturayı
+kapatır. FaturaKapat artık tahsilatsız/eksik ödemeli faturayı yapay olarak
+ödenmiş göstermez: 409 invoice_not_fully_paid döner. Tam ödenmiş faturaya
+kapatma tekrar uygulanabilir; yeni tahsilat yaratılmaz.
+
+600 nakit + 400 kart gibi parçalı ödeme korunur. Tahsilat, ödeme tipine
+göre KasaHareket/BankaHareket/CariHareket, fatura toplam/durum değişikliği
+ve mevcut Outbox işlemi tek transaction içindedir. Hata olursa tamamı
+rollback olur. Veresiye mevcut CariHareketTipi.Borc anlamını korur.
+Kasa/banka/cari aynı tenant ve şubede aktif/geçerli olmalıdır.
+Kullanıcı ve cihaz doğrulanmış IIslemBaglami üzerinden alınır.
+Vardiya zorunluluğu, yeni muhasebe, ödeme iadesi veya para üstü eklenmedi.
+Tahsilat yeni StokFis/StokHareket oluşturmaz; FiyatTipi ile OdemeTipi
+arasında bağ kurulmaz.
+
+SQL Server'da tahsilat ve kapatma aynı fatura satırını transaction içinde
+UPDLOCK/HOLDLOCK ile kilitler. Gerçek toplam kilit alındıktan sonra okunur.
+İki terminal aynı kalanı öderse yalnız biri başarılı olur; diğeri güncel
+kapalı/kalan durumuna göre 409 alır. Dağıtık kilit sistemi eklenmedi.
+
+POST /api/v1/tahsilat için client'ın ürettiği boş olmayan Guid
+IslemAnahtari zorunludur. Aynı ödeme girişiminin ağ hatası sonrası tekrarında
+AYNI anahtar ve aynı payload gönderilmelidir. Yeni ödeme için yeni anahtar
+kullanılır. TenantId + IslemAnahtari unique index ile korunur. Eski kayıtlar
+için nullable kolon vardır; yeni API kayıtlarında boş anahtar kabul edilmez.
+Silinmiş/pasif kaydın anahtarı yeniden kullanılamaz.
+
+Normalize edilmiş ödeme içeriği SHA256 IstekOzeti olarak saklanır:
+şube, fatura, ödeme tipi, tutar, para birimi, kur, kasa/banka, açıklama ve
+client'ın verdiği tarih. Eşdeğer decimal ölçekleri ve trim/uppercase para
+birimi aynı kabul edilir. Aynı anahtar ve içerik mevcut tahsilatı döndürür;
+ikinci finansal hareket veya Outbox üretmez. Farklı içerik 409
+payment_key_conflict döndürür. Response aynı Tahsilat Id'sini ve faturanın
+güncel ödeme toplamlarını taşır; eski response'un byte kopyası tutulmaz.
+
+TahsilatFisNo eşzamanlı farklı faturaların MAX+1 çakışmasını önlemek için
+TAH-yyyyMMdd-{IslemAnahtari:N} biçimindedir. Bu bir resmi fatura/fiş
+numaralandırma veya fiş tasarımı özelliği değildir.
+Tutar decimal(18,2), Kur decimal(18,6) sınırları doğrulanır; yerel tutar
+AwayFromZero ile hesaplanır. Tahsilat para birimi ve kuru faturayla uyumlu
+olmak zorundadır.
+
+GET /api/v1/tahsilat?subeId=...&faturaId=...&page=1&pageSize=20
+fatura bazlı ödeme dağılımını verir. faturaId opsiyoneldir; mevcut şube,
+tenant, aktif/soft-delete filtreleri ve Dapper açık kolonları korunur.
+pageSize 1-200 ile sınırlıdır. Swagger zorunlu IslemAnahtari ve yeni filtreyi
+yayınlar; gerçek HTTP testleri sözleşmeyi ve ProblemDetails hatalarını doğrular.
+
+Migration: 20260917154841_AddPaymentIntegrity. Yalnız Tahsilat üzerinde
+IslemAnahtari, IstekOzeti ve tenant/anahtar unique index eklendi.
+PanoPosDb database update başarılı; bekleyen EF model değişikliği yok.
+Önceki migrationlar değiştirilmedi. Mevcut SQL Server TLS 1.0 uyarısı sürer.
+
+Test sonucu: mevcut 474 + yeni 32 = 506/506 başarılı, 0 atlanan.
+29 yeni SQLite/HTTP testi ve 3 hedefli SQL Server testi eklendi.
+SQL Server testleri aynı faturaya iki farklı ödeme, aynı isteğin eşzamanlı
+tekrarı ve aynı anahtarın farklı faturada eşzamanlı kullanımı senaryolarını
+doğruladı. Testler yalnız kendi kayıtlarını temizler; geniş ölçekli yük testi
+yapılmadı. Yeniden çalıştırırken PANOPOS_TEST_SQLSERVER ortam değişkenine
+migration uygulanmış geliştirme PanoPosDb bağlantısı verilmelidir; yoksa
+bu 3 entegrasyon testi atlanır. Bağlantı bilgisi test koduna yazılmadı.
+
+Solution build başarılı: 0 hata, mevcut 1 Desktop WindowsBase uyarısı.
+Desktop, appsettings.json ve CODEX_RULES.md kullanıcı değişiklikleri
+korundu. Yeni client zorunlu IslemAnahtari sözleşmesine ayrıca uyarlanacak;
+Desktop bu görevin dışındadır. Commit/push yapılmadı.

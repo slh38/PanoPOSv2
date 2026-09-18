@@ -138,11 +138,11 @@ public sealed class FaturaServisiTests : IDisposable
         var siparis = await HazirSiparisAsync();
         var fatura = await _faturaServisi.SiparistenFaturaOlusturAsync(new SiparistenFaturaOlusturRequestDto { SiparisId = siparis.Id });
 
-        var kapali = await _faturaServisi.FaturaKapatAsync(fatura.Id, new FaturaKapatRequestDto { KapatanKullaniciId = 1 });
-
-        Assert.Equal(FaturaDurumu.Kapali, kapali.Durum);
-        Assert.NotNull(kapali.KapanisTarihi);
-        Assert.Equal(1, kapali.KapatanKullaniciId);
+        var hata = await Assert.ThrowsAsync<UygulamaHatasi>(() => _faturaServisi.FaturaKapatAsync(fatura.Id, new FaturaKapatRequestDto { KapatanKullaniciId = 1 }));
+        Assert.Equal("invoice_not_fully_paid", hata.ErrorCode);
+        var acik = await _faturaServisi.FaturaGetirAsync(fatura.Id);
+        Assert.Equal(FaturaDurumu.Acik, acik.Durum);
+        Assert.Equal(0m, acik.OdenenTutar);
     }
 
     [Fact]

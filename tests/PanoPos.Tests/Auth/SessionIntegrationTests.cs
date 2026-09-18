@@ -171,7 +171,7 @@ public sealed partial class SessionIntegrationTests : IAsyncLifetime
         Assert.Equal(line.KdvOrani, detail.KdvOrani); Assert.Equal(line.KdvDahilMi, detail.KdvDahilMi);
         Assert.Equal(line.KdvTutari, detail.KdvTutari); Assert.Equal(line.Matrah, detail.Matrah);
         Assert.Equal(line.BirimKatsayi, detail.BirimKatsayi);
-        await Post("/api/v1/tahsilat", new { FaturaId = invoiceId, OdemeTipi = OdemeTipi.KrediKarti,
+        await Post("/api/v1/tahsilat", new { IslemAnahtari = Guid.NewGuid(), FaturaId = invoiceId, OdemeTipi = OdemeTipi.KrediKarti,
             BankaId = 10, Tutar = invoice.NetToplam, ParaBirimKodu = "TRY", Kur = 1 });
         var paid = (await client.GetFromJsonAsync<PanoPos.Application.Invoice.FaturaDto>($"/api/v1/fatura/{invoiceId}"))!;
         Assert.Equal(0, paid.KalanTutar); Assert.Equal(425, paid.Detaylar[0].BirimFiyat);
@@ -385,7 +385,7 @@ public sealed partial class SessionIntegrationTests : IAsyncLifetime
     {
         await Login();
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/v1/fatura/olustur-siparisten", new { SiparisId = 20 })).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/v1/tahsilat", new { FaturaId = 20, OdemeTipi = 1, KasaId = 10, Tutar = 1, ParaBirimKodu = "TRY", Kur = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/v1/tahsilat", new { IslemAnahtari = Guid.NewGuid(), FaturaId = 20, OdemeTipi = 1, KasaId = 10, Tutar = 1, ParaBirimKodu = "TRY", Kur = 1 })).StatusCode);
     }
 
     [Fact]
@@ -393,7 +393,7 @@ public sealed partial class SessionIntegrationTests : IAsyncLifetime
     {
         await Login();
         var invoice = await Post("/api/v1/fatura/olustur-siparisten", new { SiparisId = await Order() });
-        var response = await client.PostAsJsonAsync("/api/v1/tahsilat", new { FaturaId = invoice.GetProperty("id").GetInt64(), OdemeTipi = 1, KasaId = 30, Tutar = 1, ParaBirimKodu = "TRY", Kur = 1 });
+        var response = await client.PostAsJsonAsync("/api/v1/tahsilat", new { IslemAnahtari = Guid.NewGuid(), FaturaId = invoice.GetProperty("id").GetInt64(), OdemeTipi = 1, KasaId = 30, Tutar = 1, ParaBirimKodu = "TRY", Kur = 1 });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         await using var db = new PanoPosDbContext(options);
         Assert.False(await db.Tahsilatlar.AnyAsync(x => x.TenantId == tenantA));
@@ -405,8 +405,8 @@ public sealed partial class SessionIntegrationTests : IAsyncLifetime
         await Login();
         var invoice = await Post("/api/v1/fatura/olustur-siparisten", new { SiparisId = await Order() });
         var id = invoice.GetProperty("id").GetInt64();
-        await Post("/api/v1/tahsilat", new { FaturaId = id, OdemeTipi = 1, KasaId = 10, Tutar = 600, ParaBirimKodu = "TRY", Kur = 1 });
-        var last = await Post("/api/v1/tahsilat", new { FaturaId = id, OdemeTipi = 2, BankaId = 10, Tutar = 400, ParaBirimKodu = "TRY", Kur = 1 });
+        await Post("/api/v1/tahsilat", new { IslemAnahtari = Guid.NewGuid(), FaturaId = id, OdemeTipi = 1, KasaId = 10, Tutar = 600, ParaBirimKodu = "TRY", Kur = 1 });
+        var last = await Post("/api/v1/tahsilat", new { IslemAnahtari = Guid.NewGuid(), FaturaId = id, OdemeTipi = 2, BankaId = 10, Tutar = 400, ParaBirimKodu = "TRY", Kur = 1 });
         Assert.Equal(0, last.GetProperty("faturaKalanTutar").GetDecimal());
         await using var db = new PanoPosDbContext(options);
         Assert.Single(await db.KasaHareketleri.ToListAsync());

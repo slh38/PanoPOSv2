@@ -22,9 +22,9 @@ public sealed class TahsilatController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<SayfaliSonucDto<TahsilatListeItemDto>>> Listele([FromQuery] long subeId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<SayfaliSonucDto<TahsilatListeItemDto>>> Listele([FromQuery] long subeId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default, [FromQuery] long? faturaId = null)
     {
-        return Ok(await _tahsilatServisi.TahsilatListeleAsync(subeId, page, pageSize, cancellationToken));
+        return Ok(await _tahsilatServisi.TahsilatListeleAsync(subeId, page, pageSize, cancellationToken, faturaId));
     }
 
     [HttpGet("{id:long}")]

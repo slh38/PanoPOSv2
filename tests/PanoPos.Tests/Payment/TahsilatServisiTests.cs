@@ -10,7 +10,7 @@ using PanoPos.Infrastructure.Persistence.Seed;
 
 namespace PanoPos.Tests.Payment;
 
-public sealed class TahsilatServisiTests : IDisposable
+public sealed partial class TahsilatServisiTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly PanoPosDbContext _dbContext;
@@ -41,7 +41,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 150m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -69,7 +69,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(paraBirimKodu: "USD", kur: 38.25m, netToplam: 100m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.KrediKarti,
@@ -94,7 +94,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(cariId: cari.Id, netToplam: 250m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Veresiye,
@@ -119,7 +119,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(paraBirimKodu: "EUR", kur: 41.755m, netToplam: 10m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.KrediKarti,
@@ -141,7 +141,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -165,7 +165,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -189,7 +189,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         var tahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.KrediKarti,
@@ -216,7 +216,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.KrediKarti,
@@ -229,7 +229,7 @@ public sealed class TahsilatServisiTests : IDisposable
         });
 
         var ikinciTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -256,7 +256,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -269,7 +269,7 @@ public sealed class TahsilatServisiTests : IDisposable
         });
 
         var exception = await Assert.ThrowsAsync<UygulamaHatasi>(() => _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -292,7 +292,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m);
 
         var kartTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.KrediKarti,
@@ -305,7 +305,7 @@ public sealed class TahsilatServisiTests : IDisposable
         });
 
         var nakitTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -330,7 +330,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 1000m, cariId: cari.Id);
 
         var veresiyeTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Veresiye,
@@ -342,7 +342,7 @@ public sealed class TahsilatServisiTests : IDisposable
         });
 
         var nakitTahsilat = await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -367,7 +367,7 @@ public sealed class TahsilatServisiTests : IDisposable
         var fatura = await FaturaEkleAsync(netToplam: 150m);
 
         await Assert.ThrowsAsync<UygulamaHatasi>(() => _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-        {
+        { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1,
             FaturaId = fatura.Id,
             OdemeTipi = OdemeTipi.Nakit,
@@ -395,7 +395,7 @@ public sealed class TahsilatServisiTests : IDisposable
         {
             var fatura = await FaturaEkleAsync(netToplam: 100m + i, faturaNo: $"FTR-TEST-{i:000}");
             await _tahsilatServisi.TahsilatOlusturAsync(new TahsilatOlusturRequestDto
-            {
+            { IslemAnahtari = Guid.NewGuid(),
                 SubeId = 1,
                 FaturaId = fatura.Id,
                 OdemeTipi = OdemeTipi.Nakit,

@@ -4,6 +4,8 @@ namespace PanoPos.Application.Payment;
 
 public sealed class TahsilatOlusturRequestDto
 {
+    [System.ComponentModel.DataAnnotations.Required]
+    public Guid IslemAnahtari { get; set; }
     public long SubeId { get; set; }
     public long FaturaId { get; set; }
     public OdemeTipi OdemeTipi { get; set; }

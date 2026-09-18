@@ -258,7 +258,7 @@ public sealed class SatisStokCozumTests : IDisposable
         (await db.Siparisler.SingleAsync(x => x.Id == line.SiparisId)).CariId = cari.Id;
         await db.SaveChangesAsync();
         var invoice = await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new() { SiparisId = line.SiparisId });
-        await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new() {
+        await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new() { IslemAnahtari = Guid.NewGuid(),
             SubeId = 1, FaturaId = invoice.Id, OdemeTipi = payment, Tutar = invoice.NetToplam,
             ParaBirimKodu = "TRY", Kur = 1, KullaniciId = 1, CihazId = 1,
             KasaId = kasa.Id, BankaId = banka.Id });

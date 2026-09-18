@@ -4,6 +4,7 @@ namespace PanoPos.Application.Payment;
 
 public sealed class TahsilatDto
 {
+    public Guid? IslemAnahtari { get; set; }
     public long Id { get; set; }
     public long FaturaId { get; set; }
     public string TahsilatFisNo { get; set; } = string.Empty;

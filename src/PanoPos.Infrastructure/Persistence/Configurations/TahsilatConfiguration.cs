@@ -10,6 +10,9 @@ public sealed class TahsilatConfiguration : IEntityTypeConfiguration<Tahsilat>
     {
         builder.ToTable("Tahsilat");
         PanoPosDbContext.ConfigureBaseEntity(builder);
+        builder.Property(x => x.IstekOzeti).HasMaxLength(64);
+        builder.HasIndex(x => new { x.TenantId, x.IslemAnahtari }).IsUnique()
+            .HasFilter("[IslemAnahtari] IS NOT NULL");
 
         builder.Property(x => x.TahsilatFisNo).HasMaxLength(50).IsRequired();
         builder.Property(x => x.OdemeTipi).HasColumnType("smallint").IsRequired();

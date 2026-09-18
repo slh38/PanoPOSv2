@@ -226,10 +226,10 @@ public sealed class SalesStockTests : IDisposable
         var banka = new Banka { TenantId = tenant, SubeId = 1, Ad = "Banka", Kod = "B01" };
         db.AddRange(kasa, banka); await db.SaveChangesAsync();
         var payments = new TahsilatServisi(db);
-        await payments.TahsilatOlusturAsync(new() { SubeId = 1, FaturaId = f.Id, OdemeTipi = OdemeTipi.Nakit,
+        await payments.TahsilatOlusturAsync(new() { IslemAnahtari = Guid.NewGuid(), SubeId = 1, FaturaId = f.Id, OdemeTipi = OdemeTipi.Nakit,
             KasaId = kasa.Id, KullaniciId = 1, CihazId = 1, Tutar = 600, ParaBirimKodu = "TRY", Kur = 1 });
         if (complete)
-            await payments.TahsilatOlusturAsync(new() { SubeId = 1, FaturaId = f.Id, OdemeTipi = OdemeTipi.KrediKarti,
+            await payments.TahsilatOlusturAsync(new() { IslemAnahtari = Guid.NewGuid(), SubeId = 1, FaturaId = f.Id, OdemeTipi = OdemeTipi.KrediKarti,
                 BankaId = banka.Id, KullaniciId = 1, CihazId = 1, Tutar = 400, ParaBirimKodu = "TRY", Kur = 1 });
         Assert.Single(await db.StokFisleri.ToListAsync());
         Assert.Equal(-10, (await db.StokHareketleri.SingleAsync()).Miktar);
@@ -305,7 +305,7 @@ public sealed class SalesStockTests : IDisposable
         var cari = new CariKart { TenantId = tenant, SubeId = 1, CariKodu = "A1", Ad = "Alici", Tip = CariTipi.Alici };
         db.Add(cari); await db.SaveChangesAsync();
         var f = await Invoice(await Order(cari: cari.Id));
-        await new TahsilatServisi(db).TahsilatOlusturAsync(new() { SubeId = 1, FaturaId = f.Id,
+        await new TahsilatServisi(db).TahsilatOlusturAsync(new() { IslemAnahtari = Guid.NewGuid(), SubeId = 1, FaturaId = f.Id,
             OdemeTipi = OdemeTipi.Veresiye, KullaniciId = 1, CihazId = 1, Tutar = f.NetToplam, ParaBirimKodu = "TRY", Kur = 1 });
         Assert.Single(await db.StokFisleri.ToListAsync());
         Assert.Equal(-1, (await db.StokHareketleri.SingleAsync()).Miktar);

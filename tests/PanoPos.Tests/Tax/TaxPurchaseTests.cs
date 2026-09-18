@@ -212,7 +212,7 @@ public sealed class TaxPurchaseTests : IDisposable
         order=await s.KayitliFiyatlaSatirEkleAsync(db, order.Id,new(){StokKartId=stok.Id,StokKartSatisBirimiId=birim.Id,Miktar=1,BirimFiyat=120});
         var invoice=await new FaturaServisi(db).SiparistenFaturaOlusturAsync(new(){SiparisId=order.Id});
         var kasa=new Kasa {TenantId=stok.TenantId,SubeId=1,Ad="Test kasa"};db.Add(kasa);await db.SaveChangesAsync();
-        await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new(){
+        await new PanoPos.Infrastructure.Payment.TahsilatServisi(db).TahsilatOlusturAsync(new(){ IslemAnahtari = Guid.NewGuid(),
             SubeId=1,FaturaId=invoice.Id,OdemeTipi=OdemeTipi.Nakit,KasaId=kasa.Id,KullaniciId=1,CihazId=1,
             Tutar=120,ParaBirimKodu="TRY",Kur=1});
         invoice=await new FaturaServisi(db).FaturaGetirAsync(invoice.Id);
