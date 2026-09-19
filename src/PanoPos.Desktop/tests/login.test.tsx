@@ -48,7 +48,7 @@ describe('PIN screen', () => {
     await screen.findByText('Test Sube');
     expect(auth.session.getToken()).toBe(login.oturumToken);
     expect(document.body.textContent).not.toContain(login.oturumToken);
-    expect(screen.queryByText('Hizli Satis')).toBeNull();
+    expect(screen.getByRole('heading', { name: `Merhaba, ${login.adSoyad}` })).toBeTruthy();
   });
   it('wrong PIN shows meaningful error, clears and refocuses', async () => {
     const { user, input } = mount(async () => invalidPin());
@@ -78,6 +78,7 @@ describe('PIN screen', () => {
   it('logout clears session and returns focus to PIN', async () => {
     const { user, input, auth } = mount();
     await user.type(input, '1234{Enter}');
+    await user.click(await screen.findByRole('button', { name: `Kullan\u0131c\u0131 men\u00fcs\u00fc: ${login.adSoyad}` }));
     await user.click(await screen.findByRole('button', { name: '\u00c7\u0131k\u0131\u015f Yap' }));
     const pin = await screen.findByLabelText('PIN');
     expect(document.activeElement).toBe(pin);

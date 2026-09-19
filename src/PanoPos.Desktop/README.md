@@ -31,3 +31,22 @@ login. Session/token remain in memory only. Login has no branch selector:
 the backend resolves the active branch from the configured device.
 Health means the API process responds, not a database connectivity check.
 An unreachable logout clears local memory but cannot confirm server logout.
+
+## Shell and navigation
+
+React Router uses hash routes (`#/login`, `#/`, `#/hizli-satis`) so packaged
+Tauri assets do not require server-side route fallback. All non-login routes
+require the in-memory session; logout/401 returns to login. Navigation and
+dashboard cards use the same module list. Only Home and Quick Sale are enabled;
+Quick Sale is intentionally a non-commercial placeholder for the next task.
+
+The shared shell owns the collapsible sidebar, session header and user logout
+disclosure. Sidebar state is not persisted. No dashboard totals are fabricated.
+Lucide is the single navigation icon library. The local clock updates itself
+once per minute, not the whole shell.
+
+Login and Shell share one health provider and the existing API health method.
+It checks on startup, once per minute while visible, on network recovery, and
+on explicit retry; focus/visibility changes only check when the last check is
+at least one minute old. Connection failure does not clear the session or hide
+the shell. This is a connection indicator, not offline transaction support.

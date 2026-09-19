@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { useAuth } from '../features/auth/AuthContext';
 import { errorMessage } from '../api/errors';
+import { useApiHealth } from '../features/connection/ApiHealth';
 import './auth.css';
 
 const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -14,27 +15,13 @@ export function LoginPage() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [health, setHealth] = useState<'checking' | 'connected' | 'offline'>('checking');
-  const [healthError, setHealthError] = useState('');
+  const { status: health, error: healthError, refresh } = useApiHealth();
   const pinInput = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
-  const checking = useRef(false);
-
-  useEffect(() => {
-    let active = true;
-    auth.checkHealth().then(() => { if (active) setHealth('connected'); })
-      .catch(e => { if (active) { setHealth('offline'); setHealthError(errorMessage(e)); } });
-    return () => { active = false; };
-  }, [auth]);
 
   async function retryHealth() {
-    if (checking.current) return;
-    checking.current = true;
-    setHealth('checking');
-    setHealthError('');
-    try { await auth.checkHealth(); setHealth('connected'); }
-    catch (e) { setHealth('offline'); setHealthError(errorMessage(e)); }
-    finally { checking.current = false; pinInput.current?.focus(); }
+    await refresh();
+    pinInput.current?.focus();
   }
 
   function changePin(next: string) {

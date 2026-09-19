@@ -38,4 +38,17 @@
   --color-brand-accent: #60A5FA;
   --color-brand-muted: #B8C5D9;
   --color-brand-line: #536985;
+  --color-warning-soft: #FFFBEB;
+  --color-warning-text: #92400E;
+  --color-danger-soft: #FEF2F2;
+  --sidebar-width: 232px;
+  --sidebar-compact-width: 64px;
+  --topbar-height: 64px;
+  --module-height: 164px;
+  --icon-small: 18px;
+  --icon-nav: 20px;
+  --icon-module: 30px;
+  --module-icon-box: 52px;
+  --font-wordmark: 20px;
+  --user-menu-width: 240px;
 }
