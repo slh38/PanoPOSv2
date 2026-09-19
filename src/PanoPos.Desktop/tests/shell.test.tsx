@@ -71,14 +71,14 @@ describe('Application shell', () => {
     await user.click(screen.getByRole('button', { name: 'Men\u00fcy\u00fc geni\u015flet' }));
     expect(document.querySelector('.application-shell--collapsed')).toBeNull();
   });
-  it('sidebar opens the quick sale placeholder and keeps shell', async () => {
+  it('sidebar opens the quick sale preview and keeps shell', async () => {
     const { user } = mount();
     await user.click(nav().getByRole('link', { name: quickSale }));
     expect(screen.getByTestId('location').textContent).toBe('/hizli-satis');
     expect(screen.getByRole('heading', { name: quickSale })).toBeTruthy();
-    expect(screen.getByText('Bu ekran bir sonraki g\u00f6revde olu\u015fturulacak.')).toBeTruthy();
+    expect(screen.getByText('DEMO · API satışı kapalı')).toBeTruthy();
     expect(nav().getByRole('link', { name: quickSale }).getAttribute('aria-current')).toBe('page');
-    expect(screen.queryByRole('grid')).toBeNull();
+    expect(await screen.findByRole('grid')).toBeTruthy();
   });
   it('dashboard quick sale card uses the same route as navigation', async () => {
     const { user } = mount();

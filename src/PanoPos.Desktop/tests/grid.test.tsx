@@ -34,8 +34,8 @@ describe('PanoDataGrid integration', () => {
   it('renders the real Community grid with supplied column definitions', async () => {
     render(<PanoDataGrid<Row> {...base} />);
     await screen.findByRole('grid');
-    expect(screen.getByRole('columnheader', { name: '\u00dcr\u00fcn Ad\u0131' })).toBeTruthy();
-    expect(screen.getByRole('columnheader', { name: 'Miktar' })).toBeTruthy();
+    expect(await screen.findByRole('columnheader', { name: '\u00dcr\u00fcn Ad\u0131' })).toBeTruthy();
+    expect(await screen.findByRole('columnheader', { name: 'Miktar' })).toBeTruthy();
   });
   it('shows supplied row data', async () => {
     render(<PanoDataGrid<Row> {...base} />);

@@ -63,9 +63,6 @@
 .module-status { display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-small); color: var(--color-text-secondary); }
 .module-card--active .module-status { color: var(--color-primary); }
 .module-status svg { width: var(--icon-small); height: var(--icon-small); }
-.quick-sale-placeholder { margin: var(--space-6); padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); }
-.quick-sale-placeholder p { margin-top: var(--space-3); color: var(--color-text-secondary); }
-.grid-demo-toggle { margin-top: var(--space-4); }
 .skip-link { position: fixed; left: var(--space-3); top: var(--space-3); transform: translateY(-200%); z-index: 20; padding: var(--space-3); background: var(--color-surface); color: var(--color-primary); }
 .skip-link:focus { transform: none; }
 @media (max-width: 1100px) {
