@@ -1,0 +1,26 @@
+import { themeQuartz } from 'ag-grid-community';
+
+export const panoGridTheme = themeQuartz.withParams({
+  accentColor: 'var(--color-primary)',
+  backgroundColor: 'var(--color-surface)',
+  foregroundColor: 'var(--color-text-primary)',
+  borderColor: 'var(--color-border)',
+  headerBackgroundColor: 'var(--color-background)',
+  headerTextColor: 'var(--color-text-primary)',
+  headerFontWeight: 600,
+  fontFamily: 'var(--font-family)',
+  fontSize: 'var(--font-body)',
+  spacing: 'var(--space-1)',
+  cellHorizontalPadding: 'var(--space-2)',
+  rowHeight: 'var(--grid-row-height)',
+  headerHeight: 'var(--grid-header-height)',
+  rowHoverColor: 'var(--color-primary-soft)',
+  selectedRowBackgroundColor: 'var(--grid-selected-background)',
+  rowBorder: true,
+  columnBorder: true,
+  headerColumnBorder: true,
+  headerColumnBorderHeight: '100%',
+  wrapperBorder: true,
+  wrapperBorderRadius: 'var(--radius-small)',
+  borderRadius: 'var(--radius-small)',
+});

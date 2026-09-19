@@ -51,4 +51,8 @@
   --module-icon-box: 52px;
   --font-wordmark: 20px;
   --user-menu-width: 240px;
+  --grid-row-height: 32px;
+  --grid-header-height: 36px;
+  --grid-default-height: 320px;
+  --grid-selected-background: #DBEAFE;
 }

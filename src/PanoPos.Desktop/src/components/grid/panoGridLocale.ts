@@ -1,0 +1,18 @@
+export const panoGridLocale: Readonly<Record<string, string>> = {
+  loadingOoo: 'Y\u00fckleniyor...',
+  noRowsToShow: 'Kay\u0131t bulunamad\u0131.',
+  noMatchingRows: 'E\u015fle\u015fen kay\u0131t bulunamad\u0131.',
+  page: 'Sayfa', more: 'Daha fazla', to: '-', of: '/', next: 'Sonraki', last: 'Son', first: '\u0130lk', previous: '\u00d6nceki',
+  pageSizeSelectorLabel: 'Sayfa boyutu:',
+  filterOoo: 'Filtre...', applyFilter: 'Uygula', resetFilter: 'S\u0131f\u0131rla', clearFilter: 'Temizle', cancelFilter: 'Vazge\u00e7',
+  equals: 'E\u015fittir', notEqual: 'E\u015fit de\u011fil', contains: '\u0130\u00e7erir', notContains: '\u0130\u00e7ermez',
+  startsWith: '\u0130le ba\u015flar', endsWith: '\u0130le biter', blank: 'Bo\u015f', notBlank: 'Bo\u015f de\u011fil',
+  lessThan: 'K\u00fc\u00e7\u00fckt\u00fcr', greaterThan: 'B\u00fcy\u00fckt\u00fcr', inRange: 'Aras\u0131nda',
+  lessThanOrEqual: 'K\u00fc\u00e7\u00fck veya e\u015fit', greaterThanOrEqual: 'B\u00fcy\u00fck veya e\u015fit',
+  andCondition: 'VE', orCondition: 'VEYA',
+  ariaRowSelect: 'Sat\u0131r\u0131 se\u00e7mek i\u00e7in SPACE tu\u015funa bas\u0131n',
+  ariaRowDeselect: 'Se\u00e7imi kald\u0131rmak i\u00e7in SPACE tu\u015funa bas\u0131n',
+  ariaSortableColumn: 'S\u0131ralamak i\u00e7in ENTER tu\u015funa bas\u0131n',
+  ariaColumnFilter: 'Kolon filtresi', ariaFilterColumn: 'Kolonu filtrele',
+  ariaPageSizeSelectorLabel: 'Sayfa boyutu', ariaPagination: 'Sayfalama',
+};
