@@ -1,8 +1,8 @@
 import { useId } from 'react';
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, Ref } from 'react';
 import './components.css';
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & { label: string };
+type InputProps = InputHTMLAttributes<HTMLInputElement> & { label: string; ref?: Ref<HTMLInputElement> };
 
 export function Input({ label, id, className = '', ...props }: InputProps) {
   const generatedId = useId();

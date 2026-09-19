@@ -1,0 +1,50 @@
+.auth-page { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-5); }
+.auth-shell { display: grid; grid-template-columns: 1fr 1fr; width: min(1080px, 100%); min-height: 660px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); overflow: hidden; box-shadow: var(--shadow-panel); }
+.brand-panel { background: var(--color-navy); color: var(--color-surface); padding: var(--space-6); display: flex; flex-direction: column; position: relative; }
+.brand-wordmark { font-size: var(--font-brand); font-weight: 750; letter-spacing: -1px; }
+.brand-wordmark span { color: var(--color-primary); }
+.brand-panel .brand-wordmark span { color: var(--color-brand-accent); }
+.brand-intro { margin-top: var(--space-hero); }
+.eyebrow { color: var(--color-brand-muted); font-size: var(--font-small); letter-spacing: 2px; font-weight: 600; }
+.brand-intro h1 { font-size: var(--font-login-title); line-height: 1.25; white-space: pre-line; margin: var(--space-4) 0; font-weight: 600; }
+.brand-intro > p:last-child { color: var(--color-brand-muted); white-space: pre-line; }
+.terminal-art { width: min(330px, 100%); margin: auto auto var(--space-5); padding-top: var(--space-5); stroke: var(--color-brand-line); stroke-width: 1.5; }
+.brand-footer { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--font-small); color: var(--color-brand-muted); }
+.login-panel { display: flex; flex-direction: column; padding: var(--space-6); }
+.login-form { width: 100%; max-width: 340px; margin: auto; }
+.user-mark { width: 44px; height: 44px; border-radius: var(--radius-panel); background: var(--color-primary-soft); color: var(--color-primary); display: grid; place-items: center; margin: 0 auto var(--space-3); }
+.user-mark svg { width: 24px; stroke: currentColor; stroke-width: 1.5; }
+.login-form h2 { text-align: center; font-size: var(--font-title); }
+.login-caption { text-align: center; color: var(--color-text-secondary); margin: var(--space-2) 0 var(--space-5); }
+.login-form .field label { font-size: var(--font-small); color: var(--color-text-secondary); }
+.pin-input { min-height: var(--keypad-height); text-align: center; font-size: var(--font-title); letter-spacing: 8px; }
+.pin-input[aria-invalid="true"] { border-color: var(--color-danger); }
+.login-message { min-height: 46px; padding-block: var(--space-2); color: var(--color-danger); font-size: var(--font-small); }
+.pin-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.pin-keypad .button { min-height: var(--keypad-height); font-size: var(--font-section); }
+.pin-keypad .button--secondary { background: var(--color-background); }
+.keyboard-hint { color: var(--color-text-secondary); text-align: center; font-size: var(--font-small); margin-top: var(--space-3); min-height: 18px; }
+.login-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-4); margin-top: var(--space-4); border-top: 1px solid var(--color-border); font-size: var(--font-small); color: var(--color-text-secondary); }
+.connection { display: flex; align-items: center; gap: var(--space-2); }
+.connection-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-text-secondary); }
+.connection--connected .connection-dot { background: var(--color-success); }
+.connection--offline .connection-dot { background: var(--color-danger); }
+.connection-error { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); color: var(--color-danger); }
+.connection-error p { flex: 1; }
+.connection-error .button { white-space: nowrap; font-size: var(--font-small); }
+.authenticated-page { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-5); }
+.authenticated-card { width: min(560px, 100%); display: grid; gap: var(--space-5); }
+.authenticated-card dl { display: flex; gap: var(--space-6); margin: 0; }
+.authenticated-card dt { color: var(--color-text-secondary); font-size: var(--font-small); }
+.authenticated-card dd { margin: 0; font-weight: 600; }
+.authenticated-card > p { color: var(--color-text-secondary); }
+.authenticated-card .button { justify-self: start; }
+@media (max-height: 760px) {
+  .auth-page { padding: var(--space-3); }
+  .auth-shell { min-height: 0; }
+  .login-panel { padding: var(--space-4) var(--space-5); }
+  .login-caption { margin-bottom: var(--space-3); }
+  .brand-intro { margin-top: var(--space-6); }
+  .user-mark { display: none; }
+  .pin-keypad .button, .pin-input { min-height: 50px; }
+}

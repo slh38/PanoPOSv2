@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ThemePreviewPage } from './pages/ThemePreviewPage';
+import { App } from './App';
 import './styles/tokens.css';
 import './styles/global.css';
 
@@ -9,6 +9,6 @@ if (!root) throw new Error('Application root is missing.');
 
 createRoot(root).render(
   <StrictMode>
-    <ThemePreviewPage />
+    <App />
   </StrictMode>,
 );

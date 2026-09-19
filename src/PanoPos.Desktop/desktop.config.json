@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "http://localhost:5296",
+  "cihazId": 1,
+  "timeoutMs": 10000,
+  "healthTimeoutMs": 3000
+}

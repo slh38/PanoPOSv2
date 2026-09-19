@@ -30,4 +30,12 @@
   --font-section: 16px;
   --font-title: 24px;
   --control-height: 44px;
+  --keypad-height: 60px;
+  --font-brand: 28px;
+  --font-login-title: 32px;
+  --space-hero: 56px;
+  --color-primary-soft: #EFF6FF;
+  --color-brand-accent: #60A5FA;
+  --color-brand-muted: #B8C5D9;
+  --color-brand-line: #536985;
 }

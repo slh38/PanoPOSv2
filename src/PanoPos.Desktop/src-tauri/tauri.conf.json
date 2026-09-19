@@ -12,9 +12,9 @@
   "app": {
     "windows": [{ "label": "main", "title": "PanoPOS", "width": 1440, "height": 900, "minWidth": 960, "minHeight": 640, "resizable": true }],
     "security": {
-      "capabilities": [],
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-src 'none'",
-      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:1420; object-src 'none'; base-uri 'self'; frame-src 'none'"
+      "capabilities": ["desktop-api"],
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-src 'none'",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:1420; object-src 'none'; base-uri 'self'; frame-src 'none'"
     }
   },
   "bundle": { "active": false }
