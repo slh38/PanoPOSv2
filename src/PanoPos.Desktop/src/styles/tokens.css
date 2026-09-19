@@ -1,0 +1,33 @@
+:root {
+  color-scheme: light;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-sidebar: #111827;
+  --color-navy: #172033;
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+  --color-background: #F4F6F8;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-text-primary: #172033;
+  --color-text-secondary: #64748B;
+  --color-success-text: #166534;
+  --color-success-soft: #F0FDF4;
+  --color-focus: #93C5FD;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-small: 4px;
+  --radius-panel: 8px;
+  --shadow-panel: 0 2px 8px rgb(23 32 51 / 4%);
+  --font-family: 'Segoe UI', system-ui, sans-serif;
+  --font-small: 12px;
+  --font-body: 14px;
+  --font-section: 16px;
+  --font-title: 24px;
+  --control-height: 44px;
+}

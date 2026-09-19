@@ -6,3 +6,9 @@ TestResults/
 *.user
 *.suo
 *.cache
+
+# React / Tauri Desktop outputs
+src/PanoPos.Desktop/node_modules/
+src/PanoPos.Desktop/dist/
+src/PanoPos.Desktop/src-tauri/target/
+src/PanoPos.Desktop/src-tauri/gen/
